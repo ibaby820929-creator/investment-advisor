@@ -1,0 +1,1868 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投资智能体 · 认知差引擎</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-deep: #0a0e17;
+  --bg-card: #111827;
+  --bg-card-hover: #1a2332;
+  --bg-input: #0d1320;
+  --border: #1e293b;
+  --border-active: #334155;
+  --gold: #d4a853;
+  --gold-dim: #b8943f;
+  --gold-glow: rgba(212,168,83,0.15);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.15);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.15);
+  --blue: #3b82f6;
+  --blue-dim: rgba(59,130,246,0.15);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.15);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --serif: 'Noto Serif SC', serif;
+  --sans: 'Noto Sans SC', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html { font-size: 15px; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== HEADER ===== */
+.app-header {
+  background: linear-gradient(180deg, rgba(212,168,83,0.08) 0%, transparent 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 1.2rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(20px);
+}
+
+.app-title {
+  font-family: var(--serif);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+}
+
+.app-subtitle {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  letter-spacing: 0.1em;
+}
+
+.api-config {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.api-config input {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 0.45rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: var(--mono);
+  width: 260px;
+  transition: border-color 0.2s;
+}
+
+.api-config input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.api-config input::placeholder {
+  color: var(--text-muted);
+}
+
+.api-status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s;
+}
+
+.api-status.connected { background: var(--green); box-shadow: 0 0 8px var(--green); }
+
+/* ===== NAV TABS ===== */
+.nav-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: rgba(17,24,39,0.6);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 56px;
+  z-index: 99;
+}
+
+.nav-tab {
+  padding: 0.9rem 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav-tab:hover { color: var(--text-secondary); }
+.nav-tab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+/* ===== PANELS ===== */
+.panel { display: none; padding: 2rem; max-width: 1200px; margin: 0 auto; }
+.panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* ===== FRAMEWORK PANEL ===== */
+.framework-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.2rem;
+}
+
+.fw-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.25s;
+  cursor: pointer;
+}
+
+.fw-card:hover {
+  border-color: var(--gold-dim);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+
+.fw-card-tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+}
+
+.fw-card-title {
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.6rem;
+  line-height: 1.4;
+}
+
+.fw-card-body {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.fw-card-body strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.fw-card-detail {
+  display: none;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.fw-card.expanded .fw-card-detail { display: block; animation: fadeIn 0.3s ease; }
+
+.fw-section-title {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  color: var(--gold);
+  margin-bottom: 1.2rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.fw-section { margin-bottom: 2.5rem; }
+
+/* ===== STOCK ANALYSIS PANEL ===== */
+.stock-input-row {
+  display: flex;
+  gap: 0.8rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.stock-input-row input, .stock-input-row select {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: var(--sans);
+}
+
+.stock-input-row input:focus, .stock-input-row select:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.stock-input-row select { cursor: pointer; }
+
+.btn {
+  background: linear-gradient(135deg, var(--gold), var(--gold-dim));
+  color: var(--bg-deep);
+  border: none;
+  padding: 0.7rem 1.6rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--sans);
+}
+
+.btn:hover { transform: translateY(-1px); box-shadow: 0 4px 16px var(--gold-glow); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+}
+
+.btn-outline:hover {
+  background: var(--gold-glow);
+}
+
+.stock-result {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.stock-name {
+  font-family: var(--serif);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.stock-code {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.metric-box {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.metric-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.4rem;
+}
+
+.metric-value {
+  font-family: var(--mono);
+  font-size: 1.3rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.metric-value.positive { color: var(--green); }
+.metric-value.negative { color: var(--red); }
+
+.ai-analysis {
+  margin-top: 1.5rem;
+  padding: 1.2rem;
+  background: var(--gold-glow);
+  border: 1px solid rgba(212,168,83,0.2);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.8;
+  color: var(--text-secondary);
+}
+
+.ai-analysis-title {
+  color: var(--gold);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* Manual input form */
+.manual-form {
+  display: none;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1rem;
+}
+
+.manual-form.active { display: block; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.form-group input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 0.55rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-family: var(--mono);
+}
+
+.form-group input:focus { outline: none; border-color: var(--gold); }
+
+/* ===== CYCLE PANEL ===== */
+.cycle-timeline {
+  position: relative;
+  margin: 2rem 0;
+}
+
+.cycle-line {
+  position: absolute;
+  top: 24px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.cycle-progress {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), var(--gold-dim));
+  border-radius: 2px;
+  transition: width 1s ease;
+}
+
+.cycle-stages {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.cycle-stage {
+  text-align: center;
+  flex: 1;
+  padding-top: 3rem;
+  cursor: pointer;
+}
+
+.cycle-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--border);
+  border: 3px solid var(--bg-deep);
+  position: absolute;
+  top: 17px;
+  transform: translateX(-50%);
+  transition: all 0.3s;
+  z-index: 2;
+}
+
+.cycle-dot.active {
+  background: var(--gold);
+  box-shadow: 0 0 12px var(--gold-glow);
+  width: 20px;
+  height: 20px;
+  top: 15px;
+}
+
+.cycle-dot.past { background: var(--gold-dim); }
+
+.cycle-stage-label {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-bottom: 0.3rem;
+  font-weight: 500;
+}
+
+.cycle-stage-label.active { color: var(--gold); font-weight: 700; }
+
+.cycle-stage-title {
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+.cycle-stage-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.cycle-detail-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.cycle-current-badge {
+  display: inline-block;
+  background: var(--gold-glow);
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+}
+
+.scenario-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.scenario-card {
+  background: var(--bg-deep);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.2rem;
+}
+
+.scenario-card h4 {
+  font-family: var(--serif);
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.scenario-card p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ===== ALLOCATION PANEL ===== */
+.alloc-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) { .alloc-container { grid-template-columns: 1fr; } }
+
+.alloc-input-section, .alloc-result-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.alloc-slider-group {
+  margin-bottom: 1.2rem;
+}
+
+.alloc-slider-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.4rem;
+}
+
+.alloc-slider-name {
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.alloc-slider-value {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--gold);
+}
+
+input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+}
+
+.alloc-bar {
+  display: flex;
+  height: 32px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+}
+
+.alloc-bar-segment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bg-deep);
+  transition: width 0.3s;
+  min-width: 0;
+}
+
+.alloc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.alloc-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.alloc-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.alloc-warnings {
+  margin-top: 1.5rem;
+}
+
+.alloc-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border-radius: 8px;
+  margin-bottom: 0.6rem;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.alloc-warning.warn {
+  background: var(--amber-dim);
+  border: 1px solid rgba(245,158,11,0.2);
+  color: var(--amber);
+}
+
+.alloc-warning.good {
+  background: var(--green-dim);
+  border: 1px solid rgba(34,197,94,0.2);
+  color: var(--green);
+}
+
+.alloc-warning.danger {
+  background: var(--red-dim);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: var(--red);
+}
+
+.alloc-warning-icon { font-size: 1rem; flex-shrink: 0; }
+
+/* ===== CHAT PANEL ===== */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 130px);
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.5rem 0;
+}
+
+.chat-msg {
+  margin-bottom: 1.2rem;
+  display: flex;
+  gap: 0.8rem;
+  animation: fadeIn 0.3s ease;
+}
+
+.chat-msg.user { flex-direction: row-reverse; }
+
+.chat-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.chat-msg.assistant .chat-avatar {
+  background: var(--gold-glow);
+  color: var(--gold);
+  border: 1px solid rgba(212,168,83,0.3);
+}
+
+.chat-msg.user .chat-avatar {
+  background: var(--blue-dim);
+  color: var(--blue);
+  border: 1px solid rgba(59,130,246,0.3);
+}
+
+.chat-bubble {
+  max-width: 75%;
+  padding: 0.9rem 1.2rem;
+  border-radius: 12px;
+  font-size: 0.88rem;
+  line-height: 1.7;
+}
+
+.chat-msg.assistant .chat-bubble {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+.chat-msg.user .chat-bubble {
+  background: rgba(212,168,83,0.12);
+  border: 1px solid rgba(212,168,83,0.2);
+  color: var(--text-primary);
+}
+
+.chat-input-area {
+  padding: 1rem 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.6rem;
+}
+
+.chat-input-area textarea {
+  flex: 1;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-family: var(--sans);
+  resize: none;
+  height: 48px;
+  max-height: 120px;
+  transition: border-color 0.2s;
+}
+
+.chat-input-area textarea:focus { outline: none; border-color: var(--gold); }
+
+.chat-send-btn {
+  background: var(--gold);
+  border: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-deep);
+  font-size: 1.1rem;
+  transition: all 0.2s;
+}
+
+.chat-send-btn:hover { transform: scale(1.05); }
+.chat-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.typing-indicator {
+  display: flex;
+  gap: 4px;
+  padding: 0.5rem 0;
+}
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  animation: typingBounce 1.4s infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-6px); }
+}
+
+/* ===== IRON RULES SECTION ===== */
+.iron-rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.iron-rule {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 10px 10px 0;
+  padding: 1.2rem 1.4rem;
+}
+
+.iron-rule-num {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--gold);
+  opacity: 0.4;
+  line-height: 1;
+}
+
+.iron-rule-title {
+  font-family: var(--serif);
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 0.3rem 0 0.4rem;
+}
+
+.iron-rule-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .app-header { padding: 1rem; flex-wrap: wrap; gap: 0.8rem; }
+  .api-config input { width: 180px; }
+  .nav-tabs { overflow-x: auto; }
+  .panel { padding: 1.2rem; }
+  .framework-grid { grid-template-columns: 1fr; }
+  .chat-bubble { max-width: 85%; }
+  .alloc-container { grid-template-columns: 1fr; }
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div>
+    <div class="app-title">认知差引擎</div>
+    <div class="app-subtitle">投资智能体 · 基于课程框架</div>
+  </div>
+  <div class="api-config">
+    <input type="password" id="apiKeyInput" placeholder="输入 Anthropic API Key" />
+    <div class="api-status" id="apiStatus" title="API未连接"></div>
+  </div>
+</header>
+
+<!-- NAV -->
+<nav class="nav-tabs">
+  <div class="nav-tab active" data-panel="framework">📚 投资框架</div>
+  <div class="nav-tab" data-panel="stock">📊 股票分析</div>
+  <div class="nav-tab" data-panel="cycle">🔄 市场周期</div>
+  <div class="nav-tab" data-panel="allocation">⚖️ 资产配置</div>
+  <div class="nav-tab" data-panel="chat">💬 AI对话</div>
+</nav>
+
+<!-- ===== PANEL 1: FRAMEWORK ===== -->
+<div class="panel active" id="panel-framework">
+
+  <!-- 核心公式 -->
+  <div class="fw-section">
+    <div class="fw-section-title">核心公式</div>
+    <div class="fw-card" onclick="this.classList.toggle('expanded')" style="border-left:3px solid var(--gold);">
+      <div class="fw-card-tag">底层逻辑</div>
+      <div class="fw-card-title">收益 = 承担的风险 × 人的相对认知差</div>
+      <div class="fw-card-body">光承担风险不够，还得比大多数人看得更准。认知差就是你的信息优势和判断力。所有的学习都在提升"认知差"这一端。</div>
+      <div class="fw-card-detail">财富不会被消灭，只会被转移。每一次泡沫破裂，钱从一群人手里转到另一群人手里。看懂了转移方向的人就是赢家，看不懂的就是"接盘侠"。在别人都不信的时候选择相信，认知差最大、风险反而最低。</div>
+    </div>
+  </div>
+
+  <!-- 四条铁律 -->
+  <div class="fw-section">
+    <div class="fw-section-title">四条铁律</div>
+    <div class="iron-rules">
+      <div class="iron-rule">
+        <div class="iron-rule-num">1</div>
+        <div class="iron-rule-title">要信早信</div>
+        <div class="iron-rule-desc">在别人都不相信的时候选择相信，这时候风险最低、回报最高。等所有人都相信了，你只能当接盘侠。</div>
+      </div>
+      <div class="iron-rule">
+        <div class="iron-rule-num">2</div>
+        <div class="iron-rule-title">谨慎杠杆</div>
+        <div class="iron-rule-desc">加杠杆的前提是负债低、有资产做后盾。千万不能在别人已经买了赚了钱的时候跟风加杠杆入场。</div>
+      </div>
+      <div class="iron-rule">
+        <div class="iron-rule-num">3</div>
+        <div class="iron-rule-title">反人性</div>
+        <div class="iron-rule-desc">不能把自己当成人。恐惧让你在低点割肉，贪婪让你在高点追涨，从众让你跟大家一起犯错。讨论最多的最危险。</div>
+      </div>
+      <div class="iron-rule">
+        <div class="iron-rule-num">4</div>
+        <div class="iron-rule-title">了解历史</div>
+        <div class="iron-rule-desc">充分了解为什么中国走到今天，为什么美国走到今天。我们处在康波周期的哪个阶段？历史占75%，预测占25%。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 耶鲁模型 -->
+  <div class="fw-section">
+    <div class="fw-section-title">耶鲁模型</div>
+    <div class="framework-grid">
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">维度一</div>
+        <div class="fw-card-title">地域性配置</div>
+        <div class="fw-card-body">不把钱全放一个国家或市场。A股 + 港股 + 海外分散配置，降低单一市场风险。</div>
+        <div class="fw-card-detail">人民币向下资产在定价，与美国差距最大的资产涨最快。你有港股账户，正好可以两边配置。通过QDII基金还可以间接配海外。27-28年可能是海外抄底窗口。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">维度二</div>
+        <div class="fw-card-title">资产类别配置</div>
+        <div class="fw-card-body">不同资产在不同经济周期表现不同。<strong>进攻</strong>（科技股）+ <strong>防守</strong>（银行股）+ <strong>对冲</strong>（矿产/黄金）+ <strong>现金储备</strong>。</div>
+        <div class="fw-card-detail">科技股是进攻——波动大、潜在收益高。银行股是防守——低PB、高股息4-5%。矿产和黄金是对冲——在动荡和货币贬值时保值。现金是弹药——26-27年回调时抄底用。传统生意不如投资重要（在这个特殊窗口期）。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">维度三</div>
+        <div class="fw-card-title">策略类别配置</div>
+        <div class="fw-card-body">同样买股票也要用不同策略搭配。定投摊平成本 + 择时等待回调重仓 + 指数基金分散个股风险。</div>
+        <div class="fw-card-detail">耶鲁模型年化15%（历史），调整后预期7-8%。三大核心：Diversification / Fund Selection / Market Timing（从宏观经济做微调）。520亿美金规模，26人团队，23人管投资。08年亏29%（同期美股跌76%），证明分散化的保护力。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 核心赛道 -->
+  <div class="fw-section">
+    <div class="fw-section-title">核心赛道</div>
+    <div class="framework-grid">
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">进攻 · AI大模型</div>
+        <div class="fw-card-title">智谱 · MiniMax</div>
+        <div class="fw-card-body">港股上市。智谱走B端和政府端，MiniMax偏C端和全球化。国资背景，政策驱动估值。<strong>讨论最多的最危险。</strong></div>
+        <div class="fw-card-detail">智谱已集齐五地国资背景。MiniMax市值突破3000亿港元。目前都在亏损阶段但估值被推得很高——"先有估值天花板，跟公司好坏没关系"。26年9月观察：收入是否正式增长？2-3年内能否PK美国？</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">进攻 · GPU芯片</div>
+        <div class="fw-card-title">摩尔线程</div>
+        <div class="fw-card-body">科创板上市，"中国版英伟达"。创始人张建中曾任英伟达全球副总裁。上市首日涨超500%。</div>
+        <div class="fw-card-detail">承担GPU国产替代战略任务。同赛道还有沐曦、壁仞、天数智芯、寒武纪。注意英伟达类似乐视的折旧问题——大量建设投资通过折旧分摊美化报表。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">防守 · 银行</div>
+        <div class="fw-card-title">五大行 + 中信 · 光大</div>
+        <div class="fw-card-body">PB≈0.5（打五折买净资产），股息率4-5%，港股更便宜。坏账少，净资产远高于股价。<strong>暴涨就要抛掉。</strong></div>
+        <div class="fw-card-detail">深圳老师建议：与其存银行不如买银行股。存款利息不到1%，股息率却有4-5%。国央企背景，国家不会让倒。但净息差在收窄（1.42%），赚钱空间被压缩。银行股定位是防守——不指望暴涨，求稳定分红。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">对冲 · 资源</div>
+        <div class="fw-card-title">矿产 · 黄金</div>
+        <div class="fw-card-body">下一代战备物资。实物资产在货币贬值时保值。黄金1050-1000长期持有。矿产长期持有。</div>
+        <div class="fw-card-detail">AI和芯片发展离不开稀土、锂、钴、铜等关键矿产。康波萧条期三大配置：黄金、下一代战备物资、下一代科技。美股抄底标准：最高点跌70%。海外商业地产看租售比（2.7%-8.8%）。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 中美对比 -->
+  <div class="fw-section">
+    <div class="fw-section-title">中美20年经济对比</div>
+    <div class="framework-grid">
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">美国</div>
+        <div class="fw-card-title">科技泡沫→金融危机→重建→AI</div>
+        <div class="fw-card-body">2000年互联网泡沫→01年降息→08年次贷危机（MBS/CDO/CDS链条崩塌）→12年重建→17年印钱扩张→现在杠杆极高。</div>
+        <div class="fw-card-detail">花旗从$70跌到$0.91再涨回$80。雷曼员工7000万接手资产→55亿。GDP 30%还利息，只剩科技一条路。英伟达类似乐视的折旧隐患。Price/净利润看似没问题，但Price/净现金流已预警。28年大概率金融危机。美国有30%解体概率。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">中国</div>
+        <div class="fw-card-title">房地产泡沫→十年去杠杆→科技转型</div>
+        <div class="fw-card-body">1997-2023房地产周期结束。2015股灾后十年去杠杆（20万亿→120万亿货币量翻倍但股市没涨）。19年人口不可逆，必须走科技路线。</div>
+        <div class="fw-card-detail">深交所1990年成立（深圳老师参与管理）。14-15年硬顶直上→16-17年收缩→19-24年躺平（教培/游戏/金融被清理→权力重新洗牌）。24-25年触底反弹。十年去杠杆结束=被压了十年的弹簧松手。中国没有拼命印钱通胀，在全球暴跌时有希望保住。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 三种投资类型 -->
+  <div class="fw-section">
+    <div class="fw-section-title">三种投资类型</div>
+    <div class="framework-grid">
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">类型一</div>
+        <div class="fw-card-title">集中重仓型</div>
+        <div class="fw-card-body">70-80%时间空仓等待，极度看准时重仓进入3-5只股票。<strong>不买不亏 ≠ 不买不赚</strong>（拒绝韭菜心态）。</div>
+        <div class="fw-card-detail">通缩时期利息低，先借便宜的钱储备弹药。买入标准：①低位 ②有很强的真实需求。对认知要求最高。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">类型二</div>
+        <div class="fw-card-title">长期持仓型</div>
+        <div class="fw-card-body">买没有热度但逻辑性强悍的标的，不会是热点。适合新手和稳健型投资者。</div>
+        <div class="fw-card-detail">典型标的：银行股（低PB+高股息）。不需要每天盯盘，持有吃分红。与"讨论最多的最危险"完全对应。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">类型三</div>
+        <div class="fw-card-title">专业私募型</div>
+        <div class="fw-card-body">全球配置视角，判断整体情绪。涉及期货、海外军工、私募债等。门槛极高，当前不适合新手。</div>
+        <div class="fw-card-detail">关注：欧美私募债爆发危机的风险。全球配置角度判断整体情绪变化。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地缘格局 -->
+  <div class="fw-section">
+    <div class="fw-section-title">中美关系与长期展望</div>
+    <div class="framework-grid">
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">短期 1-3年</div>
+        <div class="fw-card-title">合作：联手收割日欧</div>
+        <div class="fw-card-body">左手加强贸易，右手科技竞赛。中国配合美国印钱节奏，保证美元不崩。</div>
+        <div class="fw-card-detail">不会撕破脸，全球流动性宽松，慢牛的外部条件。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">中期 3-5年</div>
+        <div class="fw-card-title">竞争：各自解决问题</div>
+        <div class="fw-card-body">战备恢复冗余，供应链脱钩。美国可能走罗斯福新政式加税（个税18%-75%，企业税10%-40%，遗产税90%）。</div>
+        <div class="fw-card-detail">资本可能从美国流向中国。两国都在重建自己的供应链。</div>
+      </div>
+      <div class="fw-card" onclick="this.classList.toggle('expanded')">
+        <div class="fw-card-tag">长期 5-10年</div>
+        <div class="fw-card-title">共存：走出康波萧条</div>
+        <div class="fw-card-body">两条路：向内求（AI/VR/意识永生）或向外求（星辰大海/太空探索）。体感会非常难受。</div>
+        <div class="fw-card-detail">AI可能让美国通缩3-5年，高级白领大幅失业。第一名被第二名代替后10年内跌到第五名。凯文·凯利：AI时代人类是否还需要独立思考？</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANEL 2: STOCK ANALYSIS ===== -->
+<div class="panel" id="panel-stock">
+  <div class="fw-section-title">股票分析工具</div>
+  <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.2rem;line-height:1.6;">输入股票名称或代码，自动获取实时行情和关键指标，系统按老师的框架分析。</p>
+
+  <div class="stock-input-row">
+    <input type="text" id="stockSearchInput" placeholder="输入股票名称或代码（如：工商银行 或 601398）" style="flex:1;min-width:200px;" oninput="debounceSearch()" onkeydown="if(event.key==='Enter')fetchStockData()">
+    <select id="m_type" style="width:120px;">
+      <option value="auto">自动判断</option>
+      <option value="bank">银行股</option>
+      <option value="tech">科技股</option>
+      <option value="resource">矿产/资源</option>
+      <option value="index">指数基金</option>
+      <option value="other">其他</option>
+    </select>
+    <button class="btn" onclick="fetchStockData()" id="fetchBtn">🔍 查询</button>
+  </div>
+  <div id="searchSuggestions" style="background:var(--bg-card);border:1px solid var(--border);border-radius:8px;display:none;max-height:200px;overflow-y:auto;margin-top:-0.8rem;margin-bottom:1rem;"></div>
+
+  <div style="display:flex;gap:0.8rem;margin-bottom:1rem;flex-wrap:wrap;">
+    <button class="btn btn-outline" onclick="toggleManualForm()">📝 手动输入数据</button>
+    <button class="btn btn-outline" onclick="switchPanel('chat');askStockQuestion()">🤖 用AI深度分析</button>
+  </div>
+
+  <div class="manual-form" id="manualForm">
+    <h3 style="font-family:var(--serif);margin-bottom:1rem;">手动输入股票数据</h3>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>股票名称</label>
+        <input type="text" id="m_name" placeholder="如：工商银行">
+      </div>
+      <div class="form-group">
+        <label>股票代码</label>
+        <input type="text" id="m_code" placeholder="如：601398">
+      </div>
+      <div class="form-group">
+        <label>当前股价</label>
+        <input type="number" step="0.01" id="m_price" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>PE（市盈率）</label>
+        <input type="number" step="0.01" id="m_pe" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>PB（市净率）</label>
+        <input type="number" step="0.01" id="m_pb" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>股息率 %</label>
+        <input type="number" step="0.01" id="m_dividend" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>营收增速 %</label>
+        <input type="number" step="0.01" id="m_revenue_growth" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>净利润增速 %</label>
+        <input type="number" step="0.01" id="m_profit_growth" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>毛利率 %</label>
+        <input type="number" step="0.01" id="m_margin" placeholder="0.00">
+      </div>
+      <div class="form-group">
+        <label>股票类型</label>
+        <select id="m_type">
+          <option value="bank">银行股</option>
+          <option value="tech">科技股</option>
+          <option value="resource">矿产/资源</option>
+          <option value="index">指数基金</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" onclick="analyzeManualStock()">分析这只股票</button>
+  </div>
+
+  <div id="stockResult"></div>
+</div>
+
+<!-- ===== PANEL 3: MARKET CYCLE ===== -->
+<div class="panel" id="panel-cycle">
+  <div class="fw-section-title">市场周期仪表盘</div>
+  <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:0.5rem;">基于课程框架的五阶段周期判断。当前时间：<span id="currentDate" style="color:var(--gold);font-family:var(--mono);"></span></p>
+
+  <div class="cycle-timeline">
+    <div class="cycle-line"><div class="cycle-progress" id="cycleProgress"></div></div>
+    <div class="cycle-stages" id="cycleStages"></div>
+  </div>
+
+  <div class="cycle-detail-card" id="cycleDetail"></div>
+
+  <!-- 27年三种情景 -->
+  <div style="margin-top:2rem;">
+    <div class="fw-section-title">2027年三种情景</div>
+    <div class="scenario-cards">
+      <div class="scenario-card" style="border-left:3px solid var(--green);">
+        <h4 style="color:var(--green);">🟢 情景一：慢牛延续</h4>
+        <p>决策者理性推动改革，经济稳步发展。指数年涨10-15%，科技企业收入正式增长。<br><strong>操作：</strong>维持配置，逐步增加科技股比重。</p>
+      </div>
+      <div class="scenario-card" style="border-left:3px solid var(--amber);">
+        <h4 style="color:var(--amber);">🟡 情景二：快牛→快跌</h4>
+        <p>"君临天下"冲动将慢牛变成快牛。快牛之后必然快速下落（参考15年教训）。<br><strong>操作：</strong>一旦出现疯涨信号，立即减仓保留利润。</p>
+      </div>
+      <div class="scenario-card" style="border-left:3px solid var(--red);">
+        <h4 style="color:var(--red);">🔴 情景三：美国提前崩盘</h4>
+        <p>全球回撤50%。中国有希望保住（没拼命印钱），但前提是已部分替代美国资产。<br><strong>操作：</strong>增持黄金和防守型资产，保留现金等待抄底。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 关键观察指标 -->
+  <div style="margin-top:2rem;">
+    <div class="fw-section-title">关键观察指标</div>
+    <div class="framework-grid">
+      <div class="fw-card">
+        <div class="fw-card-tag">2026年9月</div>
+        <div class="fw-card-title">核心科技企业收入是否正式增长？</div>
+        <div class="fw-card-body">决定市场是"去伪存真"还是"去伪居多"。智谱、MiniMax等能否拿出真实营收？</div>
+      </div>
+      <div class="fw-card">
+        <div class="fw-card-tag">持续监控</div>
+        <div class="fw-card-title">美国AI迭代是否"惊艳"</div>
+        <div class="fw-card-body">第一次不及预期市场还能忍。第二次不及预期→大概率崩盘。关注OpenAI、Gemini的产品发布。</div>
+      </div>
+      <div class="fw-card">
+        <div class="fw-card-tag">持续监控</div>
+        <div class="fw-card-title">全球地缘政治风险</div>
+        <div class="fw-card-body">伊朗局势、中东冲突。可能成为触发美国金融危机的导火索。做计划时没考虑伊朗战争。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANEL 4: ALLOCATION ===== -->
+<div class="panel" id="panel-allocation">
+  <div class="fw-section-title">资产配置检查</div>
+  <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.5rem;">调整你的资产配置比例，系统会根据老师的耶鲁模型框架给出建议。</p>
+
+  <div class="alloc-container">
+    <div class="alloc-input-section">
+      <h3 style="font-family:var(--serif);margin-bottom:1.2rem;">调整配置比例</h3>
+      <div class="alloc-slider-group">
+        <div class="alloc-slider-label">
+          <span class="alloc-slider-name">🔴 科技股（进攻）</span>
+          <span class="alloc-slider-value" id="v_tech">30%</span>
+        </div>
+        <input type="range" min="0" max="100" value="30" id="s_tech" oninput="updateAllocation()">
+      </div>
+      <div class="alloc-slider-group">
+        <div class="alloc-slider-label">
+          <span class="alloc-slider-name">🔵 银行股（防守）</span>
+          <span class="alloc-slider-value" id="v_bank">20%</span>
+        </div>
+        <input type="range" min="0" max="100" value="20" id="s_bank" oninput="updateAllocation()">
+      </div>
+      <div class="alloc-slider-group">
+        <div class="alloc-slider-label">
+          <span class="alloc-slider-name">🟡 黄金/矿产（对冲）</span>
+          <span class="alloc-slider-value" id="v_gold">15%</span>
+        </div>
+        <input type="range" min="0" max="100" value="15" id="s_gold" oninput="updateAllocation()">
+      </div>
+      <div class="alloc-slider-group">
+        <div class="alloc-slider-label">
+          <span class="alloc-slider-name">🟢 指数基金</span>
+          <span class="alloc-slider-value" id="v_index">10%</span>
+        </div>
+        <input type="range" min="0" max="100" value="10" id="s_index" oninput="updateAllocation()">
+      </div>
+      <div class="alloc-slider-group">
+        <div class="alloc-slider-label">
+          <span class="alloc-slider-name">⚪ 现金储备</span>
+          <span class="alloc-slider-value" id="v_cash">25%</span>
+        </div>
+        <input type="range" min="0" max="100" value="25" id="s_cash" oninput="updateAllocation()">
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">总计: <span id="allocTotal" style="color:var(--gold);font-family:var(--mono);">100%</span></p>
+    </div>
+
+    <div class="alloc-result-section">
+      <h3 style="font-family:var(--serif);margin-bottom:1rem;">配置分析</h3>
+      <div class="alloc-bar" id="allocBar"></div>
+      <div class="alloc-legend">
+        <div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:#ef4444;"></div>科技股</div>
+        <div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:#3b82f6;"></div>银行股</div>
+        <div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:#f59e0b;"></div>黄金/矿产</div>
+        <div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:#22c55e;"></div>指数基金</div>
+        <div class="alloc-legend-item"><div class="alloc-legend-dot" style="background:#94a3b8;"></div>现金</div>
+      </div>
+      <div class="alloc-warnings" id="allocWarnings"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PANEL 5: AI CHAT ===== -->
+<div class="panel" id="panel-chat">
+  <div class="chat-container">
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-msg assistant">
+        <div class="chat-avatar">智</div>
+        <div class="chat-bubble">你好！我是基于投资课程框架的AI助手。你可以问我关于耶鲁模型、市场周期、股票分析、资产配置等任何问题。我会结合老师的核心观点来回答。<br><br>⚠️ 请先在顶部输入你的 Anthropic API Key 才能使用对话功能。</div>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <textarea id="chatInput" placeholder="输入你的问题..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
+      <button class="chat-send-btn" id="chatSendBtn" onclick="sendChat()">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== NAVIGATION =====
+document.querySelectorAll('.nav-tab').forEach(tab => {
+  tab.addEventListener('click', () => switchPanel(tab.dataset.panel));
+});
+
+function switchPanel(name) {
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelector(`[data-panel="${name}"]`).classList.add('active');
+  document.getElementById(`panel-${name}`).classList.add('active');
+}
+
+// ===== API KEY =====
+const apiKeyInput = document.getElementById('apiKeyInput');
+const apiStatus = document.getElementById('apiStatus');
+let apiKey = localStorage.getItem('anthropic_api_key') || '';
+if (apiKey) {
+  apiKeyInput.value = '••••••••' + apiKey.slice(-8);
+  apiStatus.classList.add('connected');
+  apiStatus.title = 'API已连接';
+}
+
+apiKeyInput.addEventListener('change', () => {
+  const val = apiKeyInput.value.trim();
+  if (val && !val.startsWith('••')) {
+    apiKey = val;
+    localStorage.setItem('anthropic_api_key', val);
+    apiKeyInput.value = '••••••••' + val.slice(-8);
+    apiStatus.classList.add('connected');
+    apiStatus.title = 'API已连接';
+  }
+});
+
+// ===== MARKET CYCLE =====
+const STAGES = [
+  { id: 1, years: '2019-2024', label: '第一阶段', title: '躺平保现金', desc: '政府清理教培/游戏/金融，权力重新洗牌。建议：关公司、留住钱。', start: 2019, end: 2024 },
+  { id: 2, years: '2024-2025', label: '第二阶段', title: '触底反弹', desc: '权力集中完成，政策转向积极。25年闭眼入慢牛，A股目标4000点。国家需要存款进股市。', start: 2024, end: 2025.5 },
+  { id: 3, years: '2026-2027', label: '第三阶段', title: '发展·去伪存真', desc: '国家强推科技。26年9月观察科技企业营收。指数涨10-15%。外资正式进入。禁止虚假炒作。', start: 2025.5, end: 2027 },
+  { id: 4, years: '2027-2028', label: '第四阶段', title: '海外抄底', desc: '28年美国大概率金融危机。美股跌70%时抄底。黄金1050-1000。海外商业地产看租售比。', start: 2027, end: 2028 },
+  { id: 5, years: '2028+', label: '第五阶段', title: '萧条期考验', desc: '若萧条期不能结束，后5年更难。皇极经世2028年需谨慎。至暗时刻。', start: 2028, end: 2030 }
+];
+
+function renderCycle() {
+  const now = new Date();
+  const currentYear = now.getFullYear() + now.getMonth() / 12;
+  document.getElementById('currentDate').textContent = now.toLocaleDateString('zh-CN');
+
+  const totalSpan = 2030 - 2019;
+  const elapsed = Math.min(Math.max(currentYear - 2019, 0), totalSpan);
+  const progressPct = (elapsed / totalSpan) * 100;
+  document.getElementById('cycleProgress').style.width = progressPct + '%';
+
+  let currentStage = STAGES[0];
+  STAGES.forEach(s => { if (currentYear >= s.start) currentStage = s; });
+
+  const stagesEl = document.getElementById('cycleStages');
+  stagesEl.innerHTML = STAGES.map((s, i) => {
+    const leftPct = ((s.start - 2019) / totalSpan) * 100;
+    const isActive = s.id === currentStage.id;
+    const isPast = currentYear > s.end;
+    return `
+      <div class="cycle-stage" onclick="showStageDetail(${i})">
+        <div class="cycle-dot ${isActive ? 'active' : ''} ${isPast ? 'past' : ''}" style="left:${leftPct}%;"></div>
+        <div class="cycle-stage-label ${isActive ? 'active' : ''}">${s.years}</div>
+        <div class="cycle-stage-title">${s.title}</div>
+        <div class="cycle-stage-desc">${isActive ? '◀ 当前阶段' : ''}</div>
+      </div>
+    `;
+  }).join('');
+
+  showStageDetail(currentStage.id - 1);
+}
+
+function showStageDetail(idx) {
+  const s = STAGES[idx];
+  const now = new Date();
+  const currentYear = now.getFullYear() + now.getMonth() / 12;
+  const isActive = currentYear >= s.start && currentYear < s.end;
+
+  document.getElementById('cycleDetail').innerHTML = `
+    ${isActive ? '<div class="cycle-current-badge">📍 当前所处阶段</div>' : ''}
+    <h3 style="font-family:var(--serif);font-size:1.2rem;margin-bottom:0.3rem;">${s.label}：${s.title}</h3>
+    <p style="font-family:var(--mono);font-size:0.8rem;color:var(--text-muted);margin-bottom:0.8rem;">${s.years}</p>
+    <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.8;">${s.desc}</p>
+    ${s.id === 2 ? '<p style="margin-top:0.8rem;color:var(--gold);font-size:0.85rem;">⏰ 最晚到2027年3月完成布局。留给我们的时间不多了。</p>' : ''}
+    ${s.id === 3 ? '<p style="margin-top:0.8rem;color:var(--amber);font-size:0.85rem;">🔍 2026年9月关键节点：核心科技企业收入是否正式增长？工业企业核心科技决定中国发展快与不快。</p>' : ''}
+    ${s.id === 4 ? '<p style="margin-top:0.8rem;color:var(--red);font-size:0.85rem;">⚠️ 美国28年大概率金融危机。抄底标准：美股最高点跌70%。花旗08年从$70跌到$0.91的教训——下跌非常深且不会死掉的才值得抄。</p>' : ''}
+  `;
+}
+
+renderCycle();
+
+// ===== ALLOCATION =====
+function updateAllocation() {
+  const tech = parseInt(document.getElementById('s_tech').value);
+  const bank = parseInt(document.getElementById('s_bank').value);
+  const gold = parseInt(document.getElementById('s_gold').value);
+  const index = parseInt(document.getElementById('s_index').value);
+  const cash = parseInt(document.getElementById('s_cash').value);
+  const total = tech + bank + gold + index + cash;
+
+  document.getElementById('v_tech').textContent = tech + '%';
+  document.getElementById('v_bank').textContent = bank + '%';
+  document.getElementById('v_gold').textContent = gold + '%';
+  document.getElementById('v_index').textContent = index + '%';
+  document.getElementById('v_cash').textContent = cash + '%';
+
+  const totalEl = document.getElementById('allocTotal');
+  totalEl.textContent = total + '%';
+  totalEl.style.color = total === 100 ? 'var(--green)' : total > 100 ? 'var(--red)' : 'var(--amber)';
+
+  // Bar
+  const bar = document.getElementById('allocBar');
+  bar.innerHTML = `
+    <div class="alloc-bar-segment" style="width:${tech}%;background:#ef4444;">${tech > 5 ? tech + '%' : ''}</div>
+    <div class="alloc-bar-segment" style="width:${bank}%;background:#3b82f6;">${bank > 5 ? bank + '%' : ''}</div>
+    <div class="alloc-bar-segment" style="width:${gold}%;background:#f59e0b;">${gold > 5 ? gold + '%' : ''}</div>
+    <div class="alloc-bar-segment" style="width:${index}%;background:#22c55e;">${index > 5 ? index + '%' : ''}</div>
+    <div class="alloc-bar-segment" style="width:${cash}%;background:#94a3b8;">${cash > 5 ? cash + '%' : ''}</div>
+  `;
+
+  // Warnings
+  const warnings = [];
+  if (total !== 100) {
+    warnings.push({ type: 'danger', icon: '❌', msg: `总比例为${total}%，应调整为100%。` });
+  }
+  if (tech > 50) {
+    warnings.push({ type: 'danger', icon: '🚨', msg: '科技股占比超过50%——"讨论最多的最危险"。耶鲁模型核心是分散化，不要把所有赌注押在一个方向。' });
+  }
+  if (tech > 30 && cash < 20) {
+    warnings.push({ type: 'warn', icon: '⚠️', msg: '科技股仓位较高但现金不足。26-27年可能出现回调抄底机会，手里没现金就没子弹。' });
+  }
+  if (cash < 15) {
+    warnings.push({ type: 'warn', icon: '⚠️', msg: '现金储备偏低。老师强调"留给我们的时间不多了"但也需要保留抄底弹药。' });
+  }
+  if (cash > 50) {
+    warnings.push({ type: 'warn', icon: '💤', msg: '现金占比过高。十年间物价涨了60%但股市没涨——持有太多现金会被通胀悄悄吃掉购买力。' });
+  }
+  if (bank === 0 && gold === 0) {
+    warnings.push({ type: 'warn', icon: '🛡️', msg: '缺少防守型和对冲型资产。耶鲁模型讲究多元化——科技股波动大，需要银行股/黄金作压舱石。' });
+  }
+  if (bank > 0 && bank < 40 && gold > 0 && cash >= 15 && tech > 0 && tech <= 40) {
+    warnings.push({ type: 'good', icon: '✅', msg: '配置较为均衡，符合耶鲁模型分散化原则。进攻（科技）+ 防守（银行）+ 对冲（黄金/矿产）+ 弹药（现金）。' });
+  }
+  if (index > 0) {
+    warnings.push({ type: 'good', icon: '📊', msg: '指数基金配置合理——不用自己选哪家公司会赢，只要整个赛道向上就能赚。科创50偏硬科技，恒生科技偏软科技。' });
+  }
+
+  const warningsEl = document.getElementById('allocWarnings');
+  warningsEl.innerHTML = warnings.map(w => `
+    <div class="alloc-warning ${w.type}">
+      <span class="alloc-warning-icon">${w.icon}</span>
+      <span>${w.msg}</span>
+    </div>
+  `).join('');
+}
+
+updateAllocation();
+
+// ===== REAL-TIME STOCK SEARCH =====
+let searchTimer = null;
+const SERVER = '';
+
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  const val = document.getElementById('stockSearchInput').value.trim();
+  if (val.length < 1) {
+    document.getElementById('searchSuggestions').style.display = 'none';
+    return;
+  }
+  searchTimer = setTimeout(() => searchStock(val), 300);
+}
+
+async function searchStock(keyword) {
+  try {
+    const res = await fetch(`${SERVER}/api/search?keyword=${encodeURIComponent(keyword)}`);
+    const data = await res.json();
+    const container = document.getElementById('searchSuggestions');
+    if (data.results && data.results.length > 0) {
+      container.innerHTML = data.results.map(r => `
+        <div style="padding:0.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;"
+          onmouseover="this.style.background='var(--bg-card-hover)'"
+          onmouseout="this.style.background='transparent'"
+          onclick="selectStock('${r.fullCode}','${r.name}')">
+          <span>${r.name}</span>
+          <span style="color:var(--text-muted);font-family:var(--mono);font-size:0.75rem;">${r.fullCode}</span>
+        </div>
+      `).join('');
+      container.style.display = 'block';
+    } else {
+      container.style.display = 'none';
+    }
+  } catch (e) {
+    console.log('搜索服务未连接，请确认服务器已启动');
+  }
+}
+
+function selectStock(code, name) {
+  document.getElementById('stockSearchInput').value = name;
+  document.getElementById('searchSuggestions').style.display = 'none';
+  fetchStockByCode(code);
+}
+
+async function fetchStockData() {
+  const input = document.getElementById('stockSearchInput').value.trim();
+  if (!input) return;
+  // If it looks like a stock code, fetch directly
+  if (/^[a-z]{0,2}\d{5,6}$/i.test(input) || /^\d{5,6}$/.test(input)) {
+    fetchStockByCode(input);
+  } else {
+    // Try search first
+    try {
+      const res = await fetch(`${SERVER}/api/search?keyword=${encodeURIComponent(input)}`);
+      const data = await res.json();
+      if (data.results && data.results.length > 0) {
+        fetchStockByCode(data.results[0].fullCode);
+      } else {
+        document.getElementById('stockResult').innerHTML = `<div class="stock-result"><p style="color:var(--red);">未找到"${input}"，请检查名称或代码。</p></div>`;
+      }
+    } catch (e) {
+      document.getElementById('stockResult').innerHTML = `<div class="stock-result"><p style="color:var(--red);">⚠️ 无法连接到数据服务器。请确认已运行 <code style="color:var(--gold);">node server.js</code></p></div>`;
+    }
+  }
+}
+
+async function fetchStockByCode(code) {
+  const resultEl = document.getElementById('stockResult');
+  resultEl.innerHTML = `<div class="stock-result" style="text-align:center;"><div class="loading-spinner"></div> 正在获取实时数据...</div>`;
+
+  try {
+    const [quoteRes, fundRes] = await Promise.all([
+      fetch(`${SERVER}/api/quote?code=${code}`),
+      fetch(`${SERVER}/api/fundamental?code=${code}`)
+    ]);
+    const quote = await quoteRes.json();
+    const fund = await fundRes.json();
+
+    if (quote.error && fund.error) {
+      resultEl.innerHTML = `<div class="stock-result"><p style="color:var(--red);">${quote.error || fund.error}</p></div>`;
+      return;
+    }
+
+    const name = quote.name || fund.name || '未知';
+    const stockCode = quote.code || fund.code || code;
+    const price = quote.price || fund.price || 0;
+    const change = quote.change || fund.change || 0;
+    const changePct = quote.changePercent || fund.changePercent || 0;
+    const pe = fund.pe;
+    const pb = fund.pb;
+    const market = quote.market || '';
+    const high = quote.high || fund.high || 0;
+    const low = quote.low || fund.low || 0;
+    const prevClose = quote.prevClose || fund.prevClose || 0;
+    const marketCap = fund.totalMarketCap || '';
+    const turnover = fund.turnoverRate || '';
+
+    // Auto-detect type
+    let type = document.getElementById('m_type').value;
+    if (type === 'auto') {
+      const n = name.toLowerCase();
+      if (n.includes('银行') || n.includes('bank')) type = 'bank';
+      else if (n.includes('科技') || n.includes('芯片') || n.includes('智能') || n.includes('信息') || n.includes('软件')) type = 'tech';
+      else if (n.includes('矿') || n.includes('资源') || n.includes('稀土') || n.includes('黄金')) type = 'resource';
+      else if (n.includes('ETF') || n.includes('指数') || n.includes('50') || n.includes('500')) type = 'index';
+      else type = 'other';
+    }
+
+    // Framework analysis
+    let analysis = generateAnalysis(type, pe, pb, 0, 0, 0, 0, name);
+
+    const isUp = parseFloat(change) >= 0;
+
+    resultEl.innerHTML = `
+      <div class="stock-result">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem;">
+          <div>
+            <div class="stock-name">${name}</div>
+            <div class="stock-code">${stockCode} · ${market}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-family:var(--mono);font-size:1.6rem;font-weight:700;color:${isUp ? 'var(--green)' : 'var(--red)'};">¥${price}</div>
+            <div style="font-family:var(--mono);font-size:0.85rem;color:${isUp ? 'var(--green)' : 'var(--red)'};">${isUp ? '+' : ''}${change} (${isUp ? '+' : ''}${changePct}%)</div>
+          </div>
+        </div>
+        <div class="metrics-grid">
+          ${pe ? `<div class="metric-box"><div class="metric-label">PE 市盈率</div><div class="metric-value">${pe}</div></div>` : ''}
+          ${pb ? `<div class="metric-box"><div class="metric-label">PB 市净率</div><div class="metric-value">${pb}</div></div>` : ''}
+          <div class="metric-box"><div class="metric-label">最高</div><div class="metric-value">${high}</div></div>
+          <div class="metric-box"><div class="metric-label">最低</div><div class="metric-value">${low}</div></div>
+          <div class="metric-box"><div class="metric-label">昨收</div><div class="metric-value">${prevClose}</div></div>
+          ${marketCap ? `<div class="metric-box"><div class="metric-label">总市值</div><div class="metric-value" style="font-size:0.9rem;">${formatMarketCap(marketCap)}</div></div>` : ''}
+          ${turnover ? `<div class="metric-box"><div class="metric-label">换手率</div><div class="metric-value">${turnover}%</div></div>` : ''}
+        </div>
+        <div class="ai-analysis">
+          <div class="ai-analysis-title">📐 基于课程框架的分析</div>
+          ${analysis.join('<br>')}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    resultEl.innerHTML = `<div class="stock-result"><p style="color:var(--red);">⚠️ 无法连接到数据服务器。请确认已运行 <code style="color:var(--gold);">node server.js</code><br><br>如果还没安装，请参考安装指南。也可以点击"手动输入数据"来使用。</p></div>`;
+  }
+}
+
+function formatMarketCap(cap) {
+  const num = parseFloat(cap);
+  if (isNaN(num)) return cap;
+  if (num >= 100000000) return (num / 100000000).toFixed(0) + '亿';
+  if (num >= 10000) return (num / 10000).toFixed(0) + '万';
+  return num.toString();
+}
+
+function generateAnalysis(type, pe, pb, dividend, revenueGrowth, profitGrowth, margin, name) {
+  let analysis = [];
+  if (type === 'bank') {
+    analysis.push(`<strong>银行股分析（防守型资产）：</strong>`);
+    if (pb && pb < 0.6) analysis.push(`✅ PB=${pb}，低于0.6，"花5毛钱买1块钱的净资产"，估值偏低。`);
+    else if (pb && pb < 1) analysis.push(`📊 PB=${pb}，破净状态，但不如0.5以下有吸引力。`);
+    else if (pb) analysis.push(`📊 PB=${pb}。`);
+    if (pe && pe < 8) analysis.push(`✅ PE=${pe}，银行股中估值偏低。`);
+    else if (pe) analysis.push(`📊 PE=${pe}。`);
+    analysis.push(`📌 深圳老师提醒：五大行+中信+光大，坏账少，净资产远高于股价。<strong>如果暴涨就要抛掉</strong>——银行股是防守型。`);
+  } else if (type === 'tech') {
+    analysis.push(`<strong>科技股分析（进攻型资产）：</strong>`);
+    if (pe && pe > 100) analysis.push(`⚠️ PE=${pe}，估值极高。"先有估值天花板，跟公司好坏没关系"——政策驱动阶段，但风险巨大。`);
+    else if (pe && pe > 50) analysis.push(`📊 PE=${pe}，估值较高，需确认有营收增长支撑。`);
+    else if (pe && pe > 0) analysis.push(`✅ PE=${pe}，科技股中算合理。`);
+    else if (pe && pe < 0) analysis.push(`⚠️ PE为负，公司目前亏损。关注26年9月能否"收入正式增长"。`);
+    analysis.push(`📌 "讨论最多、知道最多的最危险"——如果是市场热点，认知差可能已归零。`);
+  } else if (type === 'resource') {
+    analysis.push(`<strong>矿产/资源分析（对冲型资产）：</strong>`);
+    analysis.push(`矿产是实物资产，在货币贬值和动荡时期保值。深圳老师建议：矿产长期持有。`);
+    if (pe && pe > 0) analysis.push(`PE=${pe}。`);
+    if (pb && pb > 0) analysis.push(`PB=${pb}。`);
+  } else if (type === 'index') {
+    analysis.push(`<strong>指数基金分析：</strong>`);
+    analysis.push(`不用判断哪家公司赢，赛道向上就能赚。`);
+    if (pe && pe < 20) analysis.push(`✅ PE=${pe}，估值偏低，可能有配置价值。`);
+    else if (pe && pe < 40) analysis.push(`📊 PE=${pe}，估值中等。`);
+    else if (pe) analysis.push(`⚠️ PE=${pe}，估值偏高。`);
+    analysis.push(`科创50偏"硬科技"，恒生科技偏"软科技"，两边配置符合耶鲁模型。`);
+  } else {
+    analysis.push(`<strong>通用分析：</strong>`);
+    if (pe && pe > 0 && pe < 15) analysis.push(`PE=${pe}，估值偏低。`);
+    else if (pe) analysis.push(`PE=${pe}。`);
+    if (pb && pb > 0 && pb < 1) analysis.push(`PB=${pb}，破净，可能被低估。`);
+    else if (pb) analysis.push(`PB=${pb}。`);
+  }
+  analysis.push(`<br>📝 <strong>提醒：</strong>收益=风险×认知差。正确做法是自己的决策。`);
+  return analysis;
+}
+
+// ===== STOCK MANUAL FORM =====
+function toggleManualForm() {
+  document.getElementById('manualForm').classList.toggle('active');
+}
+
+function analyzeManualStock() {
+  const name = document.getElementById('m_name').value || '未知股票';
+  const code = document.getElementById('m_code').value || '------';
+  const price = parseFloat(document.getElementById('m_price').value) || 0;
+  const pe = parseFloat(document.getElementById('m_pe').value) || 0;
+  const pb = parseFloat(document.getElementById('m_pb').value) || 0;
+  const dividend = parseFloat(document.getElementById('m_dividend').value) || 0;
+  const revenueGrowth = parseFloat(document.getElementById('m_revenue_growth').value) || 0;
+  const profitGrowth = parseFloat(document.getElementById('m_profit_growth').value) || 0;
+  const margin = parseFloat(document.getElementById('m_margin').value) || 0;
+  const type = document.getElementById('m_type').value;
+
+  let analysis = [];
+
+  // Type-specific analysis based on teacher's framework
+  if (type === 'bank') {
+    analysis.push(`<strong>银行股分析（防守型资产）：</strong>`);
+    if (pb < 0.6) analysis.push(`✅ PB=${pb}，低于0.6，"花5毛钱买1块钱的净资产"，估值偏低。`);
+    else if (pb < 1) analysis.push(`📊 PB=${pb}，破净状态，但不如0.5以下有吸引力。`);
+    else analysis.push(`⚠️ PB=${pb}，银行股PB高于1的情况较少见，需确认数据。`);
+
+    if (dividend >= 4) analysis.push(`✅ 股息率${dividend}%，高于银行存款利率4倍以上，符合"与其存银行不如买银行股"的逻辑。`);
+    else if (dividend >= 3) analysis.push(`📊 股息率${dividend}%，可以接受但不算突出。`);
+    else analysis.push(`⚠️ 股息率${dividend}%偏低，银行股的核心价值在于分红。`);
+
+    analysis.push(`<br>📌 深圳老师提醒：五大行+中信+光大，坏账少，净资产远高于股价。<strong>如果暴涨就要抛掉</strong>——银行股是防守型，不是来暴富的。`);
+  }
+  else if (type === 'tech') {
+    analysis.push(`<strong>科技股分析（进攻型资产）：</strong>`);
+    if (pe > 100) analysis.push(`⚠️ PE=${pe}，估值极高。记住"先有估值天花板，跟公司好坏没关系"——这是政策驱动阶段的特征，但也意味着风险巨大。`);
+    else if (pe > 50) analysis.push(`📊 PE=${pe}，估值较高，需确认是否有营收增长支撑。`);
+    else if (pe > 0) analysis.push(`✅ PE=${pe}，科技股中算合理范围。`);
+
+    if (revenueGrowth > 50) analysis.push(`✅ 营收增速${revenueGrowth}%，处于爆发期。老师说"26年9月观察核心科技企业收入是否正式增长"。`);
+    else if (revenueGrowth > 0) analysis.push(`📊 营收增速${revenueGrowth}%，有增长但尚未进入爆发期。`);
+    else analysis.push(`❌ 营收增速${revenueGrowth}%，还在烧钱阶段。小心"去伪存真"时被淘汰。`);
+
+    if (margin > 40) analysis.push(`✅ 毛利率${margin}%，赚钱效率高。`);
+    else if (margin < 10) analysis.push(`⚠️ 毛利率只有${margin}%，赚钱效率很低。参考MiniMax C端毛利率仅4.7%。`);
+
+    analysis.push(`<br>📌 "讨论最多、知道最多的最危险"——如果这只股票已经是市场热点，认知差可能已归零。`);
+  }
+  else if (type === 'resource') {
+    analysis.push(`<strong>矿产/资源分析（对冲型资产）：</strong>`);
+    analysis.push(`矿产是实物资产，在货币贬值和动荡时期保值。AI和芯片发展离不开稀土、锂、钴、铜等关键矿产。`);
+    analysis.push(`深圳老师建议：矿产长期持有，不是拿来炒短线的。`);
+    if (dividend > 0) analysis.push(`股息率${dividend}%，有分红更好。`);
+  }
+  else if (type === 'index') {
+    analysis.push(`<strong>指数基金分析：</strong>`);
+    analysis.push(`指数基金的优势：不用判断哪家公司会赢，只要整个赛道向上就能赚。`);
+    if (pe > 0) {
+      if (pe < 20) analysis.push(`✅ 当前PE=${pe}，估值偏低，可能有配置价值。`);
+      else if (pe < 40) analysis.push(`📊 当前PE=${pe}，估值中等。`);
+      else analysis.push(`⚠️ 当前PE=${pe}，估值偏高，注意风险。`);
+    }
+    analysis.push(`科创50偏"硬科技"（芯片、AI硬件），恒生科技偏"软科技"（互联网平台）。两边配置符合耶鲁模型"地域配置"。`);
+  }
+  else {
+    analysis.push(`<strong>通用分析：</strong>`);
+    if (pe > 0 && pe < 15) analysis.push(`PE=${pe}，估值偏低。`);
+    if (pb > 0 && pb < 1) analysis.push(`PB=${pb}，破净，可能被低估。`);
+    if (dividend > 3) analysis.push(`股息率${dividend}%，分红不错。`);
+    if (revenueGrowth > 20) analysis.push(`营收增速${revenueGrowth}%，成长性好。`);
+  }
+
+  // Framework reminder
+  analysis.push(`<br>📝 <strong>老师的提醒：</strong>正确做法是自己的决策。收益=风险×认知差。不买不亏≠不买不赚（拒绝韭菜心态）。`);
+
+  const resultEl = document.getElementById('stockResult');
+  resultEl.innerHTML = `
+    <div class="stock-result">
+      <div class="stock-name">${name}</div>
+      <div class="stock-code">${code}</div>
+      <div class="metrics-grid">
+        ${price ? `<div class="metric-box"><div class="metric-label">股价</div><div class="metric-value">¥${price}</div></div>` : ''}
+        ${pe ? `<div class="metric-box"><div class="metric-label">PE 市盈率</div><div class="metric-value">${pe}</div></div>` : ''}
+        ${pb ? `<div class="metric-box"><div class="metric-label">PB 市净率</div><div class="metric-value">${pb}</div></div>` : ''}
+        ${dividend ? `<div class="metric-box"><div class="metric-label">股息率</div><div class="metric-value class="positive">${dividend}%</div></div>` : ''}
+        ${revenueGrowth ? `<div class="metric-box"><div class="metric-label">营收增速</div><div class="metric-value ${revenueGrowth > 0 ? 'positive' : 'negative'}">${revenueGrowth > 0 ? '+' : ''}${revenueGrowth}%</div></div>` : ''}
+        ${profitGrowth ? `<div class="metric-box"><div class="metric-label">净利润增速</div><div class="metric-value ${profitGrowth > 0 ? 'positive' : 'negative'}">${profitGrowth > 0 ? '+' : ''}${profitGrowth}%</div></div>` : ''}
+        ${margin ? `<div class="metric-box"><div class="metric-label">毛利率</div><div class="metric-value">${margin}%</div></div>` : ''}
+      </div>
+      <div class="ai-analysis">
+        <div class="ai-analysis-title">📐 基于课程框架的分析</div>
+        ${analysis.join('<br>')}
+      </div>
+    </div>
+  `;
+}
+
+// ===== AI CHAT =====
+const SYSTEM_PROMPT = `你是一个投资分析智能体，基于以下投资课程的核心框架来回答问题。你的知识来源于一位有雷曼兄弟工作经验的金融老师和一位深交所早期负责人的课程。
+
+## 核心公式
+收益 = 承担的风险 × 人的相对认知差
+
+## 四条铁律
+1. 要信早信：别人不信时风险最低
+2. 谨慎杠杆：负债低、有资产后盾才可加杠杆
+3. 反人性：讨论最多的最危险
+4. 了解历史：历史占75%，预测占25%
+
+## 耶鲁模型三维度
+- 地域配置（A股+港股+海外）
+- 资产类别配置（进攻科技+防守银行+对冲黄金矿产+现金储备）
+- 策略类别配置（定投+择时+指数基金）
+年化回报预期7-8%（调整后）
+
+## 五阶段周期
+1. 2019-2024：躺平保现金（去杠杆、权力重组）
+2. 2024-2025：触底反弹（闭眼入慢牛，目标4000点）
+3. 2026-2027：发展·去伪存真（国家强推科技，26年9月观察营收）
+4. 2027-2028：海外抄底（美国大概率金融危机）
+5. 2028+：萧条期考验
+
+## 核心赛道
+- AI大模型：智谱（港股B端）、MiniMax（港股C端）——政策驱动估值
+- GPU芯片：摩尔线程（科创板）——国产替代
+- 银行：五大行+中信光大——防守型，PB≈0.5，股息率4-5%，暴涨要抛
+- 矿产/黄金：对冲型，长期持有。黄金1050-1000入手
+
+## 关键判断
+- 中国十年去杠杆结束，被压的弹簧松手
+- 人民币向下资产在定价，差距最大的涨最快
+- 先有估值天花板，跟公司好坏没关系
+- 科技泡沫会反复但每次留下真正价值
+- 英伟达类似乐视折旧问题
+- 美国GDP 30%还利息，28年大概率危机
+- 美股抄底标准：最高点跌70%
+
+## 三种投资类型
+1. 集中重仓型：70-80%空仓，极度看准重仓3-5只
+2. 长期持仓型：没有热度但逻辑强悍的标的
+3. 专业私募型：全球配置视角（新手不适合）
+
+## 重要提醒
+- 你不是金融顾问，不提供具体买卖建议
+- 任何分析都基于课程框架，投资决策必须由用户自己做
+- 讨论最多知道最多的最危险
+- 27年三种情景：慢牛延续/快牛快跌/美国提前崩盘
+- 家族资产负债表管理：企业和家族分开
+
+请用中文回答，语气自然温暖，像一个懂投资的朋友。在适当的时候引用老师的原话和框架。`;
+
+let chatHistory = [];
+let isTyping = false;
+
+function addChatMessage(role, content) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = `chat-msg ${role}`;
+  div.innerHTML = `
+    <div class="chat-avatar">${role === 'assistant' ? '智' : '你'}</div>
+    <div class="chat-bubble">${content.replace(/\n/g, '<br>')}</div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg assistant';
+  div.id = 'typingIndicator';
+  div.innerHTML = `
+    <div class="chat-avatar">智</div>
+    <div class="chat-bubble">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideTyping() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+
+async function sendChat() {
+  if (isTyping) return;
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if (!msg) return;
+
+  if (!apiKey) {
+    addChatMessage('assistant', '⚠️ 请先在页面顶部输入你的 Anthropic API Key。');
+    return;
+  }
+
+  input.value = '';
+  addChatMessage('user', msg);
+  chatHistory.push({ role: 'user', content: msg });
+
+  isTyping = true;
+  document.getElementById('chatSendBtn').disabled = true;
+  showTyping();
+
+  try {
+    // Try server proxy first (avoids CORS), fall back to direct API
+    let response;
+    try {
+      response = await fetch(`${SERVER}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiKey: apiKey,
+          system: SYSTEM_PROMPT,
+          messages: chatHistory.slice(-20)
+        })
+      });
+    } catch (proxyErr) {
+      // Fallback: direct API call (may have CORS issues without server)
+      response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          system: SYSTEM_PROMPT,
+          messages: chatHistory.slice(-20)
+        })
+      });
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error.message || 'API错误');
+    }
+
+    const reply = data.content.map(c => c.text || '').join('\n');
+    chatHistory.push({ role: 'assistant', content: reply });
+
+    hideTyping();
+    addChatMessage('assistant', reply);
+  } catch (err) {
+    hideTyping();
+    addChatMessage('assistant', `❌ 请求失败：${err.message}\n\n请检查API Key是否正确，以及账户是否有余额。`);
+  }
+
+  isTyping = false;
+  document.getElementById('chatSendBtn').disabled = false;
+}
+
+function askStockQuestion() {
+  setTimeout(() => {
+    document.getElementById('chatInput').value = '帮我分析一下';
+    document.getElementById('chatInput').focus();
+  }, 300);
+}
+</script>
+</body>
+</html>
