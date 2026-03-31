@@ -869,6 +869,19 @@ input[type="range"]::-webkit-slider-thumb {
 <!-- ===== PANEL 1: FRAMEWORK ===== -->
 <div class="panel active" id="panel-framework">
 
+  <!-- 今日市场分析 -->
+  <div class="fw-section" id="dailyReportSection" style="display:none;">
+    <div class="fw-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>📡 今日市场分析</span>
+      <span id="reportTime" style="font-size:0.75rem;font-family:var(--mono);color:var(--text-muted);font-weight:400;"></span>
+    </div>
+    <div id="reportAlertBadge" style="margin-bottom:1rem;"></div>
+    <div id="reportContent" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;font-size:0.88rem;color:var(--text-secondary);line-height:1.9;"></div>
+    <div style="margin-top:0.8rem;text-align:right;">
+      <button class="btn btn-outline" onclick="loadDailyReport()" style="font-size:0.75rem;padding:0.4rem 1rem;">🔄 刷新</button>
+    </div>
+  </div>
+
   <!-- 核心公式 -->
   <div class="fw-section">
     <div class="fw-section-title">核心公式</div>
@@ -2024,6 +2037,56 @@ function askStockQuestion() {
     document.getElementById('chatInput').focus();
   }, 300);
 }
+
+// ===== DAILY REPORT =====
+async function loadDailyReport() {
+  try {
+    const res = await fetch(`${SERVER}/api/report`);
+    const data = await res.json();
+    
+    if (data.error || !data.content) {
+      document.getElementById('dailyReportSection').style.display = 'none';
+      return;
+    }
+
+    document.getElementById('dailyReportSection').style.display = 'block';
+    document.getElementById('reportTime').textContent = data.timestampCN || '';
+
+    // Alert badge
+    const badgeEl = document.getElementById('reportAlertBadge');
+    if (data.alertLevel === 'HIGH') {
+      badgeEl.innerHTML = '<span style="background:var(--red-dim);color:var(--red);padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:700;">🚨 发现重大新闻</span>';
+    } else if (data.alertLevel === 'LOW') {
+      badgeEl.innerHTML = '<span style="background:var(--blue-dim);color:var(--blue);padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:700;">📋 市场动态更新</span>';
+    } else {
+      badgeEl.innerHTML = '<span style="background:var(--green-dim);color:var(--green);padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:700;">✅ 市场平静</span>';
+    }
+
+    // Format content with markdown-like rendering
+    let html = data.content
+      .replace(/## (.*)/g, '<h3 style="font-family:var(--serif);color:var(--gold);margin:1.2rem 0 0.6rem;font-size:1.05rem;">$1</h3>')
+      .replace(/### (.*)/g, '<h4 style="color:var(--text-primary);margin:0.8rem 0 0.4rem;font-size:0.95rem;">$1</h4>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary);">$1</strong>')
+      .replace(/- (.*)/g, '<div style="padding-left:1rem;margin:0.2rem 0;">• $1</div>')
+      .replace(/\n\n/g, '<br><br>')
+      .replace(/\n/g, '<br>');
+
+    document.getElementById('reportContent').innerHTML = html;
+
+    // Check if report is older than 2 hours
+    if (data.timestamp) {
+      const reportAge = Date.now() - new Date(data.timestamp).getTime();
+      if (reportAge > 2 * 60 * 60 * 1000) {
+        document.getElementById('reportTime').textContent += ' (数据可能已过期)';
+      }
+    }
+  } catch (e) {
+    document.getElementById('dailyReportSection').style.display = 'none';
+  }
+}
+
+// Load report on page load
+loadDailyReport();
 </script>
 </body>
 </html>
