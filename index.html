@@ -1238,6 +1238,10 @@ input[type="range"]::-webkit-slider-thumb {
       </div>
     </div>
     <div class="chat-input-area">
+      <div id="modelToggle" onclick="toggleModel()" style="cursor:pointer;padding:0.5rem 0.8rem;border-radius:8px;font-size:0.7rem;font-weight:700;letter-spacing:0.05em;display:flex;align-items:center;gap:0.4rem;border:1px solid var(--border);background:var(--bg-input);color:var(--text-muted);white-space:nowrap;user-select:none;" title="点击切换模型">
+        <span id="modelDot" style="width:8px;height:8px;border-radius:50%;background:var(--blue);"></span>
+        <span id="modelLabel">Sonnet</span>
+      </div>
       <textarea id="chatInput" placeholder="输入你的问题..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
       <button class="chat-send-btn" id="chatSendBtn" onclick="sendChat()">➤</button>
     </div>
@@ -1871,6 +1875,23 @@ function detectStocks(msg) {
 
 let chatHistory = [];
 let isTyping = false;
+let currentModel = 'sonnet'; // 'sonnet' or 'opus'
+
+function toggleModel() {
+  if (currentModel === 'sonnet') {
+    currentModel = 'opus';
+    document.getElementById('modelLabel').textContent = 'Opus';
+    document.getElementById('modelDot').style.background = 'var(--gold)';
+    document.getElementById('modelToggle').style.borderColor = 'var(--gold)';
+    document.getElementById('modelToggle').style.color = 'var(--gold)';
+  } else {
+    currentModel = 'sonnet';
+    document.getElementById('modelLabel').textContent = 'Sonnet';
+    document.getElementById('modelDot').style.background = 'var(--blue)';
+    document.getElementById('modelToggle').style.borderColor = 'var(--border)';
+    document.getElementById('modelToggle').style.color = 'var(--text-muted)';
+  }
+}
 
 function addChatMessage(role, content) {
   const container = document.getElementById('chatMessages');
@@ -1954,7 +1975,8 @@ async function sendChat() {
         body: JSON.stringify({
           apiKey: apiKey,
           system: SYSTEM_PROMPT,
-          messages: chatHistory.slice(-20)
+          messages: chatHistory.slice(-20),
+          model: currentModel
         })
       });
     } catch (proxyErr) {
@@ -1968,7 +1990,7 @@ async function sendChat() {
           'anthropic-dangerous-direct-browser-access': 'true'
         },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
+          model: currentModel === 'opus' ? 'claude-opus-4-20250514' : 'claude-sonnet-4-20250514',
           max_tokens: 4000,
           system: SYSTEM_PROMPT,
           messages: chatHistory.slice(-20)
