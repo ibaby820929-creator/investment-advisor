@@ -870,17 +870,30 @@ input[type="range"]::-webkit-slider-thumb {
 <div class="panel active" id="panel-framework">
 
   <!-- 今日市场分析 -->
-  <div class="fw-section" id="dailyReportSection" style="display:none;">
-    <div class="fw-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-      <span>📡 今日市场分析</span>
-      <span id="reportTime" style="font-size:0.75rem;font-family:var(--mono);color:var(--text-muted);font-weight:400;"></span>
+  <div id="dailyReportSection" style="display:none;margin-bottom:1.5rem;">
+    <div onclick="document.getElementById('reportDetail').style.display=document.getElementById('reportDetail').style.display==='none'?'block':'none';this.querySelector('.expand-arrow').classList.toggle('rotated')" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:0.9rem 1.2rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor='var(--gold-dim)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span>📡</span>
+          <div>
+            <div style="font-size:0.9rem;font-weight:600;display:flex;align-items:center;gap:0.5rem;">今日市场分析 <span id="reportAlertBadge"></span></div>
+            <div id="reportSummary" style="font-size:0.78rem;color:var(--text-muted);margin-top:0.2rem;"></div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.8rem;">
+          <span id="reportTime" style="font-size:0.7rem;font-family:var(--mono);color:var(--text-muted);"></span>
+          <span class="expand-arrow" style="color:var(--text-muted);font-size:0.7rem;transition:transform 0.2s;">▼</span>
+        </div>
+      </div>
     </div>
-    <div id="reportAlertBadge" style="margin-bottom:1rem;"></div>
-    <div id="reportContent" style="background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:1.5rem;font-size:0.88rem;color:var(--text-secondary);line-height:1.9;"></div>
-    <div style="margin-top:0.8rem;text-align:right;">
-      <button class="btn btn-outline" onclick="loadDailyReport()" style="font-size:0.75rem;padding:0.4rem 1rem;">🔄 刷新</button>
+    <div id="reportDetail" style="display:none;background:var(--bg-card);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;padding:1.2rem 1.5rem;font-size:0.85rem;color:var(--text-secondary);line-height:1.8;margin-top:-12px;">
+      <div id="reportContent"></div>
+      <div style="margin-top:0.8rem;text-align:right;">
+        <button class="btn btn-outline" onclick="event.stopPropagation();loadDailyReport()" style="font-size:0.7rem;padding:0.3rem 0.8rem;">🔄 刷新</button>
+      </div>
     </div>
   </div>
+  <style>.expand-arrow.rotated{transform:rotate(180deg);}</style>
 
   <!-- 核心公式 -->
   <div class="fw-section">
@@ -2052,20 +2065,25 @@ async function loadDailyReport() {
     document.getElementById('dailyReportSection').style.display = 'block';
     document.getElementById('reportTime').textContent = data.timestampCN || '';
 
-    // Alert badge
+    // Alert badge (compact)
     const badgeEl = document.getElementById('reportAlertBadge');
     if (data.alertLevel === 'HIGH') {
-      badgeEl.innerHTML = '<span style="background:var(--red-dim);color:var(--red);padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:700;">🚨 发现重大新闻</span>';
+      badgeEl.innerHTML = '<span style="background:var(--red-dim);color:var(--red);padding:0.15rem 0.5rem;border-radius:10px;font-size:0.65rem;font-weight:700;">🚨 重大</span>';
     } else if (data.alertLevel === 'LOW') {
-      badgeEl.innerHTML = '<span style="background:var(--blue-dim);color:var(--blue);padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:700;">📋 市场动态更新</span>';
+      badgeEl.innerHTML = '<span style="background:var(--blue-dim);color:var(--blue);padding:0.15rem 0.5rem;border-radius:10px;font-size:0.65rem;font-weight:700;">📋 更新</span>';
     } else {
-      badgeEl.innerHTML = '<span style="background:var(--green-dim);color:var(--green);padding:0.3rem 0.8rem;border-radius:20px;font-size:0.75rem;font-weight:700;">✅ 市场平静</span>';
+      badgeEl.innerHTML = '<span style="background:var(--green-dim);color:var(--green);padding:0.15rem 0.5rem;border-radius:10px;font-size:0.65rem;font-weight:700;">✅ 平静</span>';
     }
+
+    // Extract one-line summary from content
+    const summaryMatch = data.content.match(/今日市场概况[\s\S]*?\n(.+)/);
+    const summary = summaryMatch ? summaryMatch[1].replace(/\*\*/g, '').substring(0, 80) + '...' : '点击查看详情';
+    document.getElementById('reportSummary').textContent = summary;
 
     // Format content with markdown-like rendering
     let html = data.content
-      .replace(/## (.*)/g, '<h3 style="font-family:var(--serif);color:var(--gold);margin:1.2rem 0 0.6rem;font-size:1.05rem;">$1</h3>')
-      .replace(/### (.*)/g, '<h4 style="color:var(--text-primary);margin:0.8rem 0 0.4rem;font-size:0.95rem;">$1</h4>')
+      .replace(/## (.*)/g, '<h3 style="font-family:var(--serif);color:var(--gold);margin:1.2rem 0 0.6rem;font-size:1rem;">$1</h3>')
+      .replace(/### (.*)/g, '<h4 style="color:var(--text-primary);margin:0.8rem 0 0.4rem;font-size:0.9rem;">$1</h4>')
       .replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary);">$1</strong>')
       .replace(/- (.*)/g, '<div style="padding-left:1rem;margin:0.2rem 0;">• $1</div>')
       .replace(/\n\n/g, '<br><br>')
@@ -2073,11 +2091,10 @@ async function loadDailyReport() {
 
     document.getElementById('reportContent').innerHTML = html;
 
-    // Check if report is older than 2 hours
     if (data.timestamp) {
       const reportAge = Date.now() - new Date(data.timestamp).getTime();
       if (reportAge > 2 * 60 * 60 * 1000) {
-        document.getElementById('reportTime').textContent += ' (数据可能已过期)';
+        document.getElementById('reportTime').textContent += ' (已过期)';
       }
     }
   } catch (e) {
