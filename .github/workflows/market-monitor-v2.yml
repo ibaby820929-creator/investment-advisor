@@ -1,0 +1,51 @@
+# .github/workflows/market-monitor-v2.yml
+# 📊 投资智能体 V2.0 - 市场监控系统
+# 数据源：东方财富（行情数据） + 财联社（实时快讯）
+# 推送：Telegram + Gmail
+
+name: '📊 市场监控 V2.0'
+
+on:
+  schedule:
+    # === 交易时段（北京时间 → UTC） ===
+    # 盘前概览 8:30 = UTC 0:30
+    - cron: '30 0 * * 1-5'
+    # 开盘后 9:30 = UTC 1:30
+    - cron: '30 1 * * 1-5'
+    # 上午盘 10:00, 10:30, 11:00, 11:30 = UTC 2:00-3:30
+    - cron: '0,30 2-3 * * 1-5'
+    # 午后盘 13:00, 13:30, 14:00, 14:30, 15:00 = UTC 5:00-7:00
+    - cron: '0,30 5-7 * * 1-5'
+    # 收盘总结 16:00 = UTC 8:00
+    - cron: '0 8 * * 1-5'
+  
+  # 手动触发
+  workflow_dispatch:
+
+jobs:
+  market-monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    steps:
+      - name: 📥 检出代码
+        uses: actions/checkout@v4
+
+      - name: ⚙️ 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 📦 安装依赖
+        run: |
+          npm install nodemailer 2>/dev/null || echo "nodemailer安装失败，Gmail推送将跳过"
+
+      - name: 📊 运行市场监控 V2.0
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          JUHE_NEWS_KEY: ${{ secrets.JUHE_NEWS_KEY }}
+        run: node market-monitor-v2.js
