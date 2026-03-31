@@ -8,14 +8,24 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { apiKey, messages, system } = req.body;
+  const { apiKey, messages, system, model } = req.body;
   if (!apiKey) return res.status(400).json({ error: '请提供API Key' });
 
+  // Support model switching: opus or sonnet
+  const selectedModel = model === 'opus' 
+    ? 'claude-opus-4-20250514' 
+    : 'claude-sonnet-4-20250514';
+
   const postData = JSON.stringify({
-    model: 'claude-sonnet-4-20250514',
+    model: selectedModel,
     max_tokens: 4000,
     system: system || '',
-    messages: messages || []
+    messages: messages || [],
+    tools: [{
+      type: "web_search_20250305",
+      name: "web_search",
+      max_uses: 5
+    }]
   });
 
   return new Promise((resolve) => {
@@ -30,7 +40,7 @@ module.exports = async (req, res) => {
         'anthropic-version': '2023-06-01',
         'Content-Length': Buffer.byteLength(postData)
       },
-      timeout: 60000
+      timeout: 120000
     };
 
     const apiReq = https.request(options, (apiRes) => {
@@ -38,7 +48,17 @@ module.exports = async (req, res) => {
       apiRes.on('data', chunk => data += chunk);
       apiRes.on('end', () => {
         try {
-          res.json(JSON.parse(data));
+          const parsed = JSON.parse(data);
+          if (parsed.content && Array.isArray(parsed.content)) {
+            const textParts = parsed.content
+              .filter(block => block.type === 'text')
+              .map(block => block.text);
+            parsed.content = [{
+              type: 'text',
+              text: textParts.join('\n')
+            }];
+          }
+          res.json(parsed);
         } catch (e) {
           res.json({ error: '解析响应失败' });
         }
