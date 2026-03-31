@@ -1832,13 +1832,13 @@ const SYSTEM_PROMPT = `你是Jessica的私人投资分析顾问"认知差引擎"
 // Stock data fetching for AI context
 async function fetchStockForAI(stockName) {
   try {
-    const searchRes = await fetch(\`\${SERVER}/api/search?keyword=\${encodeURIComponent(stockName)}\`);
+    const searchRes = await fetch(`${SERVER}/api/search?keyword=${encodeURIComponent(stockName)}`);
     const searchData = await searchRes.json();
     if (searchData.results && searchData.results.length > 0) {
       const code = searchData.results[0].fullCode;
       const [quoteRes, fundRes] = await Promise.all([
-        fetch(\`\${SERVER}/api/quote?code=\${code}\`),
-        fetch(\`\${SERVER}/api/fundamental?code=\${code}\`)
+        fetch(`${SERVER}/api/quote?code=${code}`),
+        fetch(`${SERVER}/api/fundamental?code=${code}`)
       ]);
       const quote = await quoteRes.json();
       const fund = await fundRes.json();
