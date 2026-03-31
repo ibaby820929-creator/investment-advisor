@@ -1,5 +1,4 @@
 const https = require('https');
-const nodemailer_disabled = true; // We'll use raw SMTP instead
 
 // ===== 配置 =====
 const CONFIG = {
@@ -8,18 +7,8 @@ const CONFIG = {
   telegramChatId: process.env.TELEGRAM_CHAT_ID,
   gmailUser: process.env.GMAIL_USER,
   gmailPass: process.env.GMAIL_APP_PASSWORD,
+  githubToken: process.env.GITHUB_TOKEN, // Auto-provided by GitHub Actions
 };
-
-// ===== 监控关键词 =====
-const MONITOR_TOPICS = [
-  '中国科技公司IPO上市 最新消息 2026',
-  'AI芯片 中国 重大新闻 最新',
-  '智谱AI MiniMax 摩尔线程 最新动态 2026',
-  '中国银行股 异动 暴涨 最新',
-  '中国经济政策 最新 重要 2026',
-  '美股 重大变化 金融危机 风险 2026',
-  '黄金价格 走势 最新'
-];
 
 // ===== Claude API 调用（带联网搜索）=====
 function callClaude(prompt) {
@@ -79,12 +68,8 @@ function callClaude(prompt) {
 
 // ===== Telegram 推送 =====
 function sendTelegram(message) {
-  return new Promise((resolve, reject) => {
-    if (!CONFIG.telegramToken || !CONFIG.telegramChatId) {
-      console.log('Telegram未配置，跳过');
-      resolve();
-      return;
-    }
+  return new Promise((resolve) => {
+    if (!CONFIG.telegramToken || !CONFIG.telegramChatId) { resolve(); return; }
 
     const postData = JSON.stringify({
       chat_id: CONFIG.telegramChatId,
@@ -107,179 +92,117 @@ function sendTelegram(message) {
     const req = https.request(options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        console.log('Telegram推送成功');
-        resolve();
-      });
+      res.on('end', () => { console.log('Telegram推送成功'); resolve(); });
     });
-
-    req.on('error', (err) => {
-      console.log('Telegram推送失败:', err.message);
-      resolve(); // 不要因为推送失败而中断
-    });
-
+    req.on('error', () => { console.log('Telegram推送失败'); resolve(); });
     req.write(postData);
     req.end();
   });
 }
 
-// ===== 邮件推送（使用Gmail SMTP）=====
-function sendEmail(subject, htmlBody) {
-  return new Promise((resolve, reject) => {
-    if (!CONFIG.gmailUser || !CONFIG.gmailPass) {
-      console.log('Gmail未配置，跳过');
-      resolve();
-      return;
-    }
+// ===== 邮件推送 =====
+function sendEmailSMTP(subject, body) {
+  return new Promise((resolve) => {
+    if (!CONFIG.gmailUser || !CONFIG.gmailPass) { resolve(); return; }
+    try {
+      const tls = require('tls');
+      const socket = tls.connect(465, 'smtp.gmail.com', () => {
+        let step = 0;
+        socket.on('data', (data) => {
+          const response = data.toString();
+          switch(step) {
+            case 0: socket.write('EHLO localhost\r\n'); step=1; break;
+            case 1: if(response.includes('250 ')){socket.write('AUTH LOGIN\r\n');step=2;} break;
+            case 2: socket.write(Buffer.from(CONFIG.gmailUser).toString('base64')+'\r\n');step=3; break;
+            case 3: socket.write(Buffer.from(CONFIG.gmailPass).toString('base64')+'\r\n');step=4; break;
+            case 4: if(response.includes('235')){socket.write(`MAIL FROM:<${CONFIG.gmailUser}>\r\n`);step=5;}else{socket.end();resolve();} break;
+            case 5: socket.write(`RCPT TO:<${CONFIG.gmailUser}>\r\n`);step=6; break;
+            case 6: socket.write('DATA\r\n');step=7; break;
+            case 7:
+              const email = `From: Investment Monitor <${CONFIG.gmailUser}>\r\nTo: ${CONFIG.gmailUser}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}\r\n.\r\n`;
+              socket.write(email);step=8; break;
+            case 8: socket.write('QUIT\r\n');console.log('邮件发送成功');socket.end();resolve(); break;
+          }
+        });
+      });
+      socket.on('error', () => { console.log('SMTP失败'); resolve(); });
+      socket.setTimeout(30000, () => { socket.destroy(); resolve(); });
+    } catch(e) { resolve(); }
+  });
+}
 
-    // 使用 Google Gmail API via HTTPS
-    const auth = Buffer.from(`${CONFIG.gmailUser}:${CONFIG.gmailPass}`).toString('base64');
-    
-    const emailContent = [
-      `From: 投资监控 <${CONFIG.gmailUser}>`,
-      `To: ${CONFIG.gmailUser}`,
-      `Subject: =?UTF-8?B?${Buffer.from(subject).toString('base64')}?=`,
-      'MIME-Version: 1.0',
-      'Content-Type: text/html; charset=UTF-8',
-      '',
-      htmlBody
-    ].join('\r\n');
+// ===== 保存报告到GitHub =====
+function saveReportToGithub(report) {
+  return new Promise((resolve) => {
+    if (!CONFIG.githubToken) { console.log('无GitHub Token，跳过保存'); resolve(); return; }
 
-    const raw = Buffer.from(emailContent).toString('base64url');
+    const content = Buffer.from(JSON.stringify(report, null, 2)).toString('base64');
 
-    const postData = JSON.stringify({ raw });
-
-    const options = {
-      hostname: 'gmail.googleapis.com',
+    // First, try to get the existing file SHA
+    const getOptions = {
+      hostname: 'api.github.com',
       port: 443,
-      path: '/gmail/v1/users/me/messages/send',
-      method: 'POST',
+      path: '/repos/ibaby820929-creator/investment-advisor/contents/data/latest-report.json',
+      method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${auth}`,
-        'Content-Length': Buffer.byteLength(postData)
+        'User-Agent': 'investment-monitor',
+        'Authorization': `token ${CONFIG.githubToken}`,
+        'Accept': 'application/vnd.github.v3+json'
       },
       timeout: 30000
     };
 
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        if (res.statusCode >= 200 && res.statusCode < 300) {
-          console.log('邮件发送成功');
-        } else {
-          console.log('邮件发送失败，状态码:', res.statusCode, '使用备用方案...');
-          // 备用：通过简单的fetch发送
-        }
-        resolve();
-      });
-    });
+    const getReq = https.request(getOptions, (getRes) => {
+      let getData = '';
+      getRes.on('data', chunk => getData += chunk);
+      getRes.on('end', () => {
+        let sha = null;
+        try {
+          const existing = JSON.parse(getData);
+          sha = existing.sha;
+        } catch(e) {}
 
-    req.on('error', (err) => {
-      console.log('邮件发送失败:', err.message);
-      resolve();
-    });
-
-    req.write(postData);
-    req.end();
-  });
-}
-
-// ===== 备用邮件方案：通过SMTP发送 =====
-function sendEmailSMTP(subject, body) {
-  return new Promise((resolve) => {
-    if (!CONFIG.gmailUser || !CONFIG.gmailPass) {
-      resolve();
-      return;
-    }
-
-    try {
-      // 使用 Node.js 内置的 net/tls 模块发送邮件
-      const tls = require('tls');
-      
-      const socket = tls.connect(465, 'smtp.gmail.com', () => {
-        let step = 0;
-        
-        socket.on('data', (data) => {
-          const response = data.toString();
-          
-          switch(step) {
-            case 0: // 等待服务器欢迎
-              socket.write(`EHLO localhost\r\n`);
-              step = 1;
-              break;
-            case 1: // EHLO响应
-              if (response.includes('250 ')) {
-                socket.write(`AUTH LOGIN\r\n`);
-                step = 2;
-              }
-              break;
-            case 2: // AUTH响应
-              socket.write(Buffer.from(CONFIG.gmailUser).toString('base64') + '\r\n');
-              step = 3;
-              break;
-            case 3: // 用户名响应
-              socket.write(Buffer.from(CONFIG.gmailPass).toString('base64') + '\r\n');
-              step = 4;
-              break;
-            case 4: // 密码响应
-              if (response.includes('235')) {
-                socket.write(`MAIL FROM:<${CONFIG.gmailUser}>\r\n`);
-                step = 5;
-              } else {
-                console.log('邮件认证失败');
-                socket.end();
-                resolve();
-              }
-              break;
-            case 5:
-              socket.write(`RCPT TO:<${CONFIG.gmailUser}>\r\n`);
-              step = 6;
-              break;
-            case 6:
-              socket.write('DATA\r\n');
-              step = 7;
-              break;
-            case 7:
-              const email = [
-                `From: Investment Monitor <${CONFIG.gmailUser}>`,
-                `To: ${CONFIG.gmailUser}`,
-                `Subject: ${subject}`,
-                'Content-Type: text/plain; charset=UTF-8',
-                '',
-                body,
-                '',
-                '.',
-                ''
-              ].join('\r\n');
-              socket.write(email);
-              step = 8;
-              break;
-            case 8:
-              socket.write('QUIT\r\n');
-              console.log('邮件发送成功(SMTP)');
-              socket.end();
-              resolve();
-              break;
-          }
+        // Now create or update the file
+        const putBody = JSON.stringify({
+          message: 'Update market report ' + new Date().toISOString(),
+          content: content,
+          ...(sha ? { sha } : {})
         });
-      });
 
-      socket.on('error', (err) => {
-        console.log('SMTP连接失败:', err.message);
-        resolve();
-      });
+        const putOptions = {
+          hostname: 'api.github.com',
+          port: 443,
+          path: '/repos/ibaby820929-creator/investment-advisor/contents/data/latest-report.json',
+          method: 'PUT',
+          headers: {
+            'User-Agent': 'investment-monitor',
+            'Authorization': `token ${CONFIG.githubToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(putBody)
+          },
+          timeout: 30000
+        };
 
-      socket.setTimeout(30000, () => {
-        socket.destroy();
-        resolve();
+        const putReq = https.request(putOptions, (putRes) => {
+          let putData = '';
+          putRes.on('data', chunk => putData += chunk);
+          putRes.on('end', () => {
+            if (putRes.statusCode >= 200 && putRes.statusCode < 300) {
+              console.log('报告已保存到GitHub');
+            } else {
+              console.log('保存报告失败:', putRes.statusCode, putData.substring(0, 200));
+            }
+            resolve();
+          });
+        });
+        putReq.on('error', (err) => { console.log('保存报告出错:', err.message); resolve(); });
+        putReq.write(putBody);
+        putReq.end();
       });
-
-    } catch (e) {
-      console.log('邮件发送异常:', e.message);
-      resolve();
-    }
+    });
+    getReq.on('error', (err) => { console.log('获取文件SHA出错:', err.message); resolve(); });
+    getReq.end();
   });
 }
 
@@ -296,8 +219,7 @@ async function runMonitor() {
   }
 
   try {
-    // 第一步：让AI搜索所有监控领域的最新消息
-    const searchPrompt = `你是一个投资市场监控助手。请搜索以下领域的最新重大新闻（最近24小时内的），找出可能影响投资决策的重要信息：
+    const searchPrompt = `你是一个专业的投资市场分析师。请搜索以下领域的最新重大新闻（最近24小时内的），找出可能影响投资决策的重要信息：
 
 监控领域：
 1. 中国科技公司IPO动态（新股申报、过会、招股、上市）
@@ -308,24 +230,32 @@ async function runMonitor() {
 6. 美股和全球市场重大变化
 7. 黄金价格重大波动
 
-请搜索后，按以下格式输出：
+请搜索后，严格按以下格式输出：
 
-如果有重大新闻（可能影响投资决策的），输出：
+第一行必须是以下三个之一：
 ALERT_LEVEL: HIGH
-然后列出每条重大新闻，包括：标题、来源、简要内容、对投资的潜在影响
-
-如果只是普通新闻（不太影响投资决策），输出：
 ALERT_LEVEL: LOW
-然后简要列出主要新闻标题
-
-如果没有什么特别的新闻，输出：
 ALERT_LEVEL: NONE
 
-注意：
-- "重大"的标准是：可能直接影响你监控的这些赛道的投资决策
-- 比如：某家关注的公司宣布上市、政策重大调整、市场暴跌暴涨、行业格局变化等
-- 普通的公司日常运营新闻不算重大
-- 请用中文回答`;
+然后按以下格式输出分析（用中文）：
+
+## 今日市场概况
+一段话总结今天市场的整体情况
+
+## 重要新闻
+对每条重要新闻：
+### 新闻标题
+- 内容摘要：简要说明发生了什么
+- 投资影响：这对投资者意味着什么
+- 操作建议：基于这条新闻应该关注什么
+
+## 关键数据
+列出今天关键的市场数据（指数、黄金、汇率等）
+
+## 风险提示
+当前需要注意的风险因素
+
+注意"重大"的标准：可能直接影响科技股、银行股、黄金等核心赛道的投资决策。`;
 
     console.log('正在搜索最新市场动态...\n');
     const result = await callClaude(searchPrompt);
@@ -334,25 +264,31 @@ ALERT_LEVEL: NONE
     console.log(result);
     console.log('\n');
 
-    // 判断是否需要推送
     const isHigh = result.includes('ALERT_LEVEL: HIGH') || result.includes('ALERT_LEVEL:HIGH');
     const isLow = result.includes('ALERT_LEVEL: LOW') || result.includes('ALERT_LEVEL:LOW');
+    const alertLevel = isHigh ? 'HIGH' : (isLow ? 'LOW' : 'NONE');
+
+    const cleanResult = result
+      .replace(/ALERT_LEVEL:\s*(HIGH|LOW|NONE)\s*/g, '')
+      .trim();
+
+    const now = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+
+    // Save report to GitHub (always save, regardless of alert level)
+    const report = {
+      timestamp: new Date().toISOString(),
+      timestampCN: now,
+      alertLevel: alertLevel,
+      content: cleanResult
+    };
+    await saveReportToGithub(report);
 
     if (isHigh) {
       console.log('🚨 发现重大新闻！正在推送...\n');
 
-      // 清理输出文本（去掉ALERT_LEVEL标记）
-      const cleanResult = result
-        .replace(/ALERT_LEVEL:\s*HIGH\s*/g, '')
-        .trim();
-
-      const now = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-
-      // Telegram推送
       const telegramMsg = `🚨 <b>投资监控 - 重大新闻</b>\n📅 ${now}\n\n${cleanResult.substring(0, 3500)}`;
       await sendTelegram(telegramMsg);
 
-      // 邮件推送
       const emailSubject = `[投资监控] 重大新闻提醒 - ${now}`;
       await sendEmailSMTP(emailSubject, cleanResult);
 
@@ -360,18 +296,11 @@ ALERT_LEVEL: NONE
     } else if (isLow) {
       console.log('📋 有一些普通新闻，不触发推送。');
       
-      // 每天早上8点发一次日报（通过检查当前小时）
       const hour = new Date(new Date().toLocaleString('en', { timeZone: 'Asia/Shanghai' })).getHours();
       if (hour >= 8 && hour < 9) {
-        const cleanResult = result.replace(/ALERT_LEVEL:\s*LOW\s*/g, '').trim();
-        const now = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-        
         const telegramMsg = `📋 <b>投资监控 - 每日简报</b>\n📅 ${now}\n\n${cleanResult.substring(0, 3500)}`;
         await sendTelegram(telegramMsg);
-        
-        const emailSubject = `[投资日报] ${now}`;
-        await sendEmailSMTP(emailSubject, cleanResult);
-        
+        await sendEmailSMTP(`[投资日报] ${now}`, cleanResult);
         console.log('已发送每日简报。');
       }
     } else {
@@ -380,8 +309,6 @@ ALERT_LEVEL: NONE
 
   } catch (err) {
     console.error('监控运行出错:', err.message);
-    
-    // 如果是API错误，推送错误通知
     if (CONFIG.telegramToken) {
       await sendTelegram(`⚠️ 投资监控运行出错：${err.message}`);
     }
@@ -392,5 +319,4 @@ ALERT_LEVEL: NONE
   console.log('========================================');
 }
 
-// 执行
 runMonitor();
