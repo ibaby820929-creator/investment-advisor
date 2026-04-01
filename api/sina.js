@@ -25,23 +25,48 @@ module.exports = async (req, res) => {
   const hqText = await fetchUrl(`https://hq.sinajs.cn/rn=${Date.now()}&list=${code}`);
 
   if (detail === '1') {
-    const rawCode = code.replace(/^sh|^sz/, '');
-    const market = code.startsWith('sh') ? 'sh' : 'sz';
-    const fUrl = `https://money.finance.sina.com.cn/quotes_service/api/json_v2.php/CN_MarketData.getKLineData?symbol=${code}&scale=240&ma=5&datalen=1`;
-    const iUrl = `http://push2.eastmoney.com/api/qt/stock/get?secid=${market === 'sh' ? '1' : '0'}.${rawCode}&ut=fa5fd1943c7b386f172d6893dbfba10b&fltt=2&invt=2&fields=f162,f167,f168,f116,f117`;
-    
-    let pe = '', pb = '', totalMv = '', turnover = '';
-    try {
-      const iText = await fetchUrl(iUrl);
-      const iJson = JSON.parse(iText);
-      if (iJson && iJson.data) {
-        pe = iJson.data.f162 || '';
-        pb = iJson.data.f167 || '';
-        turnover = iJson.data.f168 || '';
-        totalMv = iJson.data.f116 || '';
-      }
-    } catch(e) {}
-
+    const iText = await fetchUrl(`https://hq.sinajs.cn/rn=${Date.now()}&list=${code}_i`);
+    let pe = '', pb = '', totalMv = '', turnover = '', eps = '';
+    if (iText) {
+      try {
+        const m = iText.match(/"(.+)"/);
+        if (m) {
+          const raw = m[1];
+          const segments = raw.split(',');
+          if (segments.length > 30) {
+            eps = segments[30] || '';
+          }
+          const pipeGroups = raw.split('|');
+          for (const pg of pipeGroups) {
+            const n = parseFloat(pg);
+            if (pg.match(/^\d{10,}$/) || pg.match(/^\d{10,}\.\d+$/)) {
+              if (!totalMv) totalMv = pg;
+            }
+          }
+          const epsVal = parseFloat(eps);
+          const priceMatch = hqText.match(/"[^"]+"/);
+          if (priceMatch) {
+            const hqFields = priceMatch[0].replace(/"/g,'').split(',');
+            const price = parseFloat(hqFields[3]);
+            if (price && epsVal) {
+              pe = (price / epsVal).toFixed(2);
+            }
+            const bvMatch = raw.match(/(\d+\.\d{3})\|(\d+\.\d{3})\|(\d+\.\d{3})\|(\d+\.\d{3})\|(\d+\.\d{3})/);
+            if (bvMatch && price) {
+              const bv = parseFloat(bvMatch[1]);
+              if (bv > 0) pb = (price / bv).toFixed(2);
+            }
+          }
+          const mvMatch = raw.match(/\|(\d{11,})\|/g);
+          if (mvMatch) {
+            for (const mv of mvMatch) {
+              const clean = mv.replace(/\|/g, '');
+              if (!totalMv || clean.length < totalMv.length) totalMv = clean;
+            }
+          }
+        }
+      } catch(e) {}
+    }
     res.status(200).json({ hq: hqText, pe, pb, totalMv, turnover });
   } else {
     res.status(200).send(hqText);
