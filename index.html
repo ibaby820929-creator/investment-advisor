@@ -1447,13 +1447,14 @@ async function fetchStockByCode(code) {
 
   try {
     const sinaCode = code.startsWith('6') ? 'sh' + code : 'sz' + code;
-      const sinaRes = await fetch(`/api/sina?code=${sinaCode}`);
-      const sinaText = await sinaRes.text();
+      const sinaRes = await fetch(`/api/sina?code=${sinaCode}&detail=1`);
+      const sinaJson = await sinaRes.json();
+      const sinaText = sinaJson.hq;
       const match = sinaText.match(/"(.+)"/);
       if (!match) throw new Error('无数据');
       const f = match[1].split(',');
       const quote = {name: f[0], code: code, price: parseFloat(f[3])||0, change: (parseFloat(f[3])-parseFloat(f[2])).toFixed(2), changePercent: parseFloat(f[2]) ? (((parseFloat(f[3])-parseFloat(f[2]))/parseFloat(f[2]))*100).toFixed(2) : 0, market: code.startsWith('6') ? '沪' : '深'};
-      const fund = {name: f[0], code: code, price: quote.price, pe: 0, pb: 0, high: parseFloat(f[4])||0, low: parseFloat(f[5])||0, prevClose: parseFloat(f[2])||0, turnover: 0, marketCap: 0};
+      const fund = {name: f[0], code: code, price: quote.price, pe: sinaJson.pe || '', pb: sinaJson.pb || '', high: parseFloat(f[4])||0, low: parseFloat(f[5])||0, prevClose: parseFloat(f[2])||0, turnover: sinaJson.turnover || '', marketCap: sinaJson.totalMv || '', totalMarketCap: sinaJson.totalMv || '', turnoverRate: sinaJson.turnover || ''};
 
     if (quote.error && fund.error) {
       resultEl.innerHTML = `<div class="stock-result"><p style="color:var(--red);">${quote.error || fund.error}</p></div>`;
