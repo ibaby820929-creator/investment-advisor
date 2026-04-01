@@ -1,4 +1,5 @@
 const https = require('https');
+const iconv = require('iconv-lite');
 
 module.exports = (req, res) => {
   const { code } = req.query;
@@ -11,8 +12,10 @@ module.exports = (req, res) => {
     const chunks = [];
     resp.on('data', c => chunks.push(c));
     resp.on('end', () => {
-      const text = Buffer.concat(chunks).toString();
+      const buf = Buffer.concat(chunks);
+      const text = iconv.decode(buf, 'gbk');
       res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
       res.status(200).send(text);
     });
   }).on('error', (e) => {
