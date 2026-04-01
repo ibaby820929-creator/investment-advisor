@@ -1427,26 +1427,19 @@ function selectStock(code, name) {
 }
 
 async function fetchStockData() {
-  const input = document.getElementById('stockSearchInput').value.trim();
-  if (!input) return;
-  // If it looks like a stock code, fetch directly
-  if (/^[a-z]{0,2}\d{5,6}$/i.test(input) || /^\d{5,6}$/.test(input)) {
-    fetchStockByCode(input);
-  } else {
-    // Try search first
-    try {
-      const res = await fetch(`${SERVER}/api/search?keyword=${encodeURIComponent(input)}`);
-      const data = await res.json();
-      if (data.results && data.results.length > 0) {
-        fetchStockByCode(data.results[0].fullCode);
+      const input = document.getElementById('stockSearchInput').value.trim();
+      if (!input) return;
+      if (/^[a-z]{0,2}\d{5,6}$/i.test(input) || /^\d{5,6}$/.test(input)) {
+        fetchStockByCode(input.replace(/^sh|^sz/i, ''));
       } else {
-        document.getElementById('stockResult').innerHTML = `<div class="stock-result"><p style="color:var(--red);">未找到"${input}"，请检查名称或代码。</p></div>`;
+        const common = {'工商银行':'601398','建设银行':'601939','农业银行':'601288','中国银行':'601988','交通银行':'601328','中信银行':'601998','光大银行':'601818','摩尔线程':'688795','沐曦股份':'688981','寒武纪':'688256','海光信息':'688041','贵州茅台':'600519','比亚迪':'002594','宁德时代':'300750','中国平安':'601318','招商银行':'600036','浦发银行':'600000'};
+        if (common[input]) {
+          fetchStockByCode(common[input]);
+        } else {
+          document.getElementById('stockResult').innerHTML = '<div class="stock-result"><p style="color:var(--red);">未找到该股票，请直接输入6位股票代码（如 601398）</p></div>';
+        }
       }
-    } catch (e) {
-      document.getElementById('stockResult').innerHTML = `<div class="stock-result"><p style="color:var(--red);">⚠️ 无法连接到数据服务器。请确认已运行 <code style="color:var(--gold);">node server.js</code></p></div>`;
     }
-  }
-}
 
 async function fetchStockByCode(code) {
   const resultEl = document.getElementById('stockResult');
