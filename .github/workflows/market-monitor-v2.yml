@@ -1,9 +1,9 @@
 # .github/workflows/market-monitor-v2.yml
-# 📊 投资智能体 V2.0 - 市场监控系统
+# 📊 投资智能体 V2.1 - 新浪财经数据源
 # 数据源：东方财富（行情数据） + 财联社（实时快讯）
 # 推送：Telegram + Gmail
 
-name: '📊 市场监控 V2.0'
+name: '📊 市场监控 V2.1'
 
 on:
   schedule:
