@@ -1261,26 +1261,7 @@ function switchPanel(name) {
   document.getElementById(`panel-${name}`).classList.add('active');
 }
 
-// ===== API KEY =====
-const apiKeyInput = document.getElementById('apiKeyInput');
-const apiStatus = document.getElementById('apiStatus');
-let apiKey = localStorage.getItem('anthropic_api_key') || '';
-if (apiKey) {
-  apiKeyInput.value = '••••••••' + apiKey.slice(-8);
-  apiStatus.classList.add('connected');
-  apiStatus.title = 'API已连接';
-}
 
-apiKeyInput.addEventListener('change', () => {
-  const val = apiKeyInput.value.trim();
-  if (val && !val.startsWith('••')) {
-    apiKey = val;
-    localStorage.setItem('anthropic_api_key', val);
-    apiKeyInput.value = '••••••••' + val.slice(-8);
-    apiStatus.classList.add('connected');
-    apiStatus.title = 'API已连接';
-  }
-});
 
 // ===== MARKET CYCLE =====
 const STAGES = [
@@ -1409,6 +1390,8 @@ function updateAllocation() {
 updateAllocation();
 
 // ===== REAL-TIME STOCK SEARCH =====
+  var searchTimer = null;
+    const SINA_API = 'https://hq.sinajs.cn';
 let searchTimer = null;
     const SINA_API = 'https://hq.sinajs.cn';
 
@@ -1428,8 +1411,7 @@ async function searchStock(keyword) {
     const data = await res.json();
     const container = document.getElementById('searchSuggestions');
     if (data.results && data.results.length > 0) {
-      container.innerHTML = data.results.map(r => `
-        <div style="padding:0.6rem 1rem;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem;display:flex;justify-content:space-between;align-items:center;"
+
           onmouseover="this.style.background='var(--bg-card-hover)'"
           onmouseout="this.style.background='transparent'"
           onclick="selectStock('${r.fullCode}','${r.name}')">
