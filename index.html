@@ -851,10 +851,6 @@ input[type="range"]::-webkit-slider-thumb {
     <div class="app-title">认知差引擎</div>
     <div class="app-subtitle">投资智能体 · 基于课程框架</div>
   </div>
-  <div class="api-config">
-    <input type="password" id="apiKeyInput" placeholder="输入 Anthropic API Key" />
-    <div class="api-status" id="apiStatus" title="API未连接"></div>
-  </div>
 </header>
 
 <!-- NAV -->
@@ -863,7 +859,6 @@ input[type="range"]::-webkit-slider-thumb {
   <div class="nav-tab" data-panel="stock">📊 股票分析</div>
   <div class="nav-tab" data-panel="cycle">🔄 市场周期</div>
   <div class="nav-tab" data-panel="allocation">⚖️ 资产配置</div>
-  <div class="nav-tab" data-panel="chat">💬 AI对话</div>
 </nav>
 
 <!-- ===== PANEL 1: FRAMEWORK ===== -->
@@ -1253,27 +1248,6 @@ input[type="range"]::-webkit-slider-thumb {
     </div>
   </div>
 </div>
-
-<!-- ===== PANEL 5: AI CHAT ===== -->
-<div class="panel" id="panel-chat">
-  <div class="chat-container">
-    <div class="chat-messages" id="chatMessages">
-      <div class="chat-msg assistant">
-        <div class="chat-avatar">智</div>
-        <div class="chat-bubble">你好！我是基于投资课程框架的AI助手。你可以问我关于耶鲁模型、市场周期、股票分析、资产配置等任何问题。我会结合老师的核心观点来回答。<br><br>⚠️ 请先在顶部输入你的 Anthropic API Key 才能使用对话功能。</div>
-      </div>
-    </div>
-    <div class="chat-input-area">
-      <div id="modelToggle" onclick="toggleModel()" style="cursor:pointer;padding:0.5rem 0.8rem;border-radius:8px;font-size:0.7rem;font-weight:700;letter-spacing:0.05em;display:flex;align-items:center;gap:0.4rem;border:1px solid var(--border);background:var(--bg-input);color:var(--text-muted);white-space:nowrap;user-select:none;" title="点击切换模型">
-        <span id="modelDot" style="width:8px;height:8px;border-radius:50%;background:var(--blue);"></span>
-        <span id="modelLabel">Sonnet</span>
-      </div>
-      <textarea id="chatInput" placeholder="输入你的问题..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"></textarea>
-      <button class="chat-send-btn" id="chatSendBtn" onclick="sendChat()">➤</button>
-    </div>
-  </div>
-</div>
-
 <script>
 // ===== NAVIGATION =====
 document.querySelectorAll('.nav-tab').forEach(tab => {
