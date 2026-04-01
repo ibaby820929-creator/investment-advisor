@@ -41,24 +41,4 @@ module.exports = async (req, res) => {
     res.status(200).send(hqText);
   }
 };
-```
 
-Commit 后，再去编辑 `index.html`，搜索 `fetchStockByCode` 函数里的：
-```
-const sinaRes = await fetch(`/api/sina?code=${sinaCode}`);
-```
-
-替换成：
-```
-const sinaRes = await fetch(`/api/sina?code=${sinaCode}&detail=1`);
-const sinaJson = await sinaRes.json();
-const sinaText = sinaJson.hq;
-const extraPE = sinaJson.pe || '';
-const extraPB = sinaJson.pb || '';
-const extraMV = sinaJson.totalMv || '';
-const extraTO = sinaJson.turnover || '';
-```
-
-然后删掉下面原来的这行（因为已经在上面获取了）：
-```
-const sinaText = await sinaRes.text();
