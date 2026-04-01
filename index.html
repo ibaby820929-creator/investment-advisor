@@ -1527,7 +1527,7 @@ async function fetchStockByCode(code) {
   } catch (e) {
    resultEl.innerHTML = `<div class="stock-result"><p style="color:var(--red);">⚠ 获取数据失败，请检查股票代码是否正确。也可以点击"手动输入数据"</p></div>`;
 }
-
+}
 function formatMarketCap(cap) {
   const num = parseFloat(cap);
   if (isNaN(num)) return cap;
