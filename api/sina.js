@@ -1,24 +1,64 @@
 const https = require('https');
 
-module.exports = (req, res) => {
-  const { code } = req.query;
+function fetchUrl(url) {
+  return new Promise((resolve) => {
+    https.get(url, {
+      headers: { 'Referer': 'https://finance.sina.com.cn/', 'User-Agent': 'Mozilla/5.0' }
+    }, (resp) => {
+      const chunks = [];
+      resp.on('data', c => chunks.push(c));
+      resp.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        const decoder = new TextDecoder('gbk');
+        resolve(decoder.decode(buf));
+      });
+    }).on('error', () => resolve(''));
+  });
+}
+
+module.exports = async (req, res) => {
+  const { code, detail } = req.query;
   if (!code) return res.status(400).json({ error: 'missing code' });
 
-  const url = `https://hq.sinajs.cn/rn=${Date.now()}&list=${code}`;
-  https.get(url, {
-    headers: { 'Referer': 'https://finance.sina.com.cn/', 'User-Agent': 'Mozilla/5.0' }
-  }, (resp) => {
-    const chunks = [];
-    resp.on('data', c => chunks.push(c));
-    resp.on('end', () => {
-      const buf = Buffer.concat(chunks);
-      const decoder = new TextDecoder('gbk');
-      const text = decoder.decode(buf);
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.status(200).send(text);
-    });
-  }).on('error', (e) => {
-    res.status(500).json({ error: e.message });
-  });
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+
+  const hqText = await fetchUrl(`https://hq.sinajs.cn/rn=${Date.now()}&list=${code}`);
+
+  if (detail === '1') {
+    const fText = await fetchUrl(`https://finance.sina.com.cn/realstock/company/${code}/jsvar.js`);
+    let pe = '', pb = '', totalMv = '', turnover = '', eps = '';
+    const peM = fText.match(/pe_d[^=]*=\s*"?([0-9.]+)/);
+    const pbM = fText.match(/pb[^=]*=\s*"?([0-9.]+)/);
+    const mvM = fText.match(/totalMarketCap[^=]*=\s*"?([0-9.]+)/);
+    const toM = fText.match(/turnover[^=]*=\s*"?([0-9.]+)/);
+    if (peM) pe = peM[1];
+    if (pbM) pb = pbM[1];
+    if (mvM) totalMv = mvM[1];
+    if (toM) turnover = toM[1];
+    res.status(200).json({ hq: hqText, pe, pb, totalMv, turnover });
+  } else {
+    res.status(200).send(hqText);
+  }
 };
+```
+
+Commit 后，再去编辑 `index.html`，搜索 `fetchStockByCode` 函数里的：
+```
+const sinaRes = await fetch(`/api/sina?code=${sinaCode}`);
+```
+
+替换成：
+```
+const sinaRes = await fetch(`/api/sina?code=${sinaCode}&detail=1`);
+const sinaJson = await sinaRes.json();
+const sinaText = sinaJson.hq;
+const extraPE = sinaJson.pe || '';
+const extraPB = sinaJson.pb || '';
+const extraMV = sinaJson.totalMv || '';
+const extraTO = sinaJson.turnover || '';
+```
+
+然后删掉下面原来的这行（因为已经在上面获取了）：
+```
+const sinaText = await sinaRes.text();
