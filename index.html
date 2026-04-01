@@ -1454,7 +1454,7 @@ async function fetchStockByCode(code) {
 
   try {
     const sinaCode = code.startsWith('6') ? 'sh' + code : 'sz' + code;
-      const sinaRes = await fetch(`https://hq.sinajs.cn/rn=${Date.now()}&list=${sinaCode}`, {headers: {'Referer': 'https://finance.sina.com.cn/'}});
+      const sinaRes = await fetch(`/api/sina?code=${sinaCode}`);
       const sinaText = await sinaRes.text();
       const match = sinaText.match(/"(.+)"/);
       if (!match) throw new Error('无数据');
