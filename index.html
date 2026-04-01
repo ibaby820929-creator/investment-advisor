@@ -1410,7 +1410,7 @@ updateAllocation();
 
 // ===== REAL-TIME STOCK SEARCH =====
 let searchTimer = null;
-const SERVER = '';
+    const SINA_API = 'https://hq.sinajs.cn';
 
 function debounceSearch() {
   clearTimeout(searchTimer);
@@ -1479,12 +1479,14 @@ async function fetchStockByCode(code) {
   resultEl.innerHTML = `<div class="stock-result" style="text-align:center;"><div class="loading-spinner"></div> 正在获取实时数据...</div>`;
 
   try {
-    const [quoteRes, fundRes] = await Promise.all([
-      fetch(`${SERVER}/api/quote?code=${code}`),
-      fetch(`${SERVER}/api/fundamental?code=${code}`)
-    ]);
-    const quote = await quoteRes.json();
-    const fund = await fundRes.json();
+    const sinaCode = code.startsWith('6') ? 'sh' + code : 'sz' + code;
+      const sinaRes = await fetch(`https://hq.sinajs.cn/rn=${Date.now()}&list=${sinaCode}`, {headers: {'Referer': 'https://finance.sina.com.cn/'}});
+      const sinaText = await sinaRes.text();
+      const match = sinaText.match(/"(.+)"/);
+      if (!match) throw new Error('无数据');
+      const f = match[1].split(',');
+      const quote = {name: f[0], code: code, price: parseFloat(f[3])||0, change: (parseFloat(f[3])-parseFloat(f[2])).toFixed(2), changePercent: parseFloat(f[2]) ? (((parseFloat(f[3])-parseFloat(f[2]))/parseFloat(f[2]))*100).toFixed(2) : 0, market: code.startsWith('6') ? '沪' : '深'};
+      const fund = {name: f[0], code: code, price: quote.price, pe: 0, pb: 0, high: parseFloat(f[4])||0, low: parseFloat(f[5])||0, prevClose: parseFloat(f[2])||0, turnover: 0, marketCap: 0};
 
     if (quote.error && fund.error) {
       resultEl.innerHTML = `<div class="stock-result"><p style="color:var(--red);">${quote.error || fund.error}</p></div>`;
@@ -1549,8 +1551,7 @@ async function fetchStockByCode(code) {
       </div>
     `;
   } catch (e) {
-    resultEl.innerHTML = `<div class="stock-result"><p style="color:var(--red);">⚠️ 无法连接到数据服务器。请确认已运行 <code style="color:var(--gold);">node server.js</code><br><br>如果还没安装，请参考安装指南。也可以点击"手动输入数据"来使用。</p></div>`;
-  }
+   resultEl.innerHTML = `<div class="stock-result"><p style="color:var(--red);">⚠ 获取数据失败，请检查股票代码是否正确。也可以点击"手动输入数据"</p></div>`;
 }
 
 function formatMarketCap(cap) {
