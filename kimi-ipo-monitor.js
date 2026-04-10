@@ -125,11 +125,12 @@ ${newItems.map((item, i) => `${i + 1}. [${item.source}] ${item.title} (${item.da
 
 过滤掉：无关新闻、纯产品更新、重复报道。
 
-仅返回JSON，不要其他文字：
+IMPORTANT: Return ONLY valid JSON, no other text, no markdown, no explanation.
+Format:
 {
-  "hasImportant": true或false,
+  "hasImportant": true,
   "important": [
-    { "index": 序号, "title": "标题", "reason": "重要原因（一句话）" }
+    { "index": 1, "title": "news title here", "reason": "why important in one sentence" }
   ]
 }`;
 
@@ -154,7 +155,19 @@ ${newItems.map((item, i) => `${i + 1}. [${item.source}] ${item.title} (${item.da
   try {
     const response = await httpsRequest(options, body);
     const text = response.content[0].text;
-    const clean = text.replace(/```json|```/g, '').trim();
+    console.log('Claude原始返回:', text.substring(0, 200));
+
+    // 多层清理：去掉markdown、中文引号、控制字符
+    let clean = text
+      .replace(/```json|```/g, '')
+      .replace(/[\u201c\u201d\u2018\u2019]/g, '"') // 中文引号转英文
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '') // 控制字符
+      .trim();
+
+    // 提取JSON块（防止前后有多余文字）
+    const jsonMatch = clean.match(/\{[\s\S]*\}/);
+    if (jsonMatch) clean = jsonMatch[0];
+
     return JSON.parse(clean);
   } catch (e) {
     console.error('Claude分析失败:', e.message);
