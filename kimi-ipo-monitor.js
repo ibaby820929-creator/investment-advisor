@@ -7,13 +7,13 @@ const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 const STATE_FILE = './data/kimi-ipo-state.json';
 
-// 监控关键词（用于搜索）
+// 监控关键词
 const SEARCH_KEYWORDS = [
   '月之暗面 IPO',
   '月之暗面 上市',
-  'Kimi 招股书',
-  '月之暗面 港股',
+  '月之暗面 招股书',
   '月之暗面 融资',
+  'Moonshot AI IPO',
 ];
 
 // ─── 工具函数 ────────────────────────────────────────
@@ -34,7 +34,6 @@ function httpsRequest(options, body = null) {
   });
 }
 
-// 读取上次状态（已推送过的新闻标题集合）
 function loadState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
@@ -48,73 +47,95 @@ function saveState(state) {
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
 }
 
-// ─── 搜索新闻（用聚合数据或直接抓百度新闻RSS） ──────────────────
-async function fetchNews(keyword) {
-  // 使用百度新闻RSS
+// ─── 抓取 Google News RSS ────────────────────────────
+function fetchGoogleNews(keyword) {
   return new Promise((resolve) => {
     const encodedKeyword = encodeURIComponent(keyword);
+    const path = `/rss/search?q=${encodedKeyword}&hl=zh-CN&gl=CN&ceid=CN:zh-Hans`;
+
     const options = {
-      hostname: 'news.baidu.com',
-      path: `/search?word=${encodedKeyword}&tn=rss`,
+      hostname: 'news.google.com',
+      path,
       method: 'GET',
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      timeout: 8000,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1)',
+        'Accept': 'application/rss+xml, application/xml, text/xml',
+      },
+      timeout: 10000,
     };
 
     const req = https.request(options, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
-        // 从RSS XML中提取标题和链接
         const items = [];
-        const titleMatches = data.matchAll(/<title><!\[CDATA\[(.+?)\]\]><\/title>/g);
-        const linkMatches = [...data.matchAll(/<link>(.+?)<\/link>/g)];
-        const dateMatches = [...data.matchAll(/<pubDate>(.+?)<\/pubDate>/g)];
+        const itemBlocks = [...data.matchAll(/<item>([\s\S]*?)<\/item>/g)];
+        for (const block of itemBlocks) {
+          const content = block[1];
 
-        let i = 0;
-        for (const match of titleMatches) {
-          if (i === 0) { i++; continue; } // 跳过频道标题
-          items.push({
-            title: match[1].trim(),
-            link: linkMatches[i] ? linkMatches[i][1].trim() : '',
-            date: dateMatches[i - 1] ? dateMatches[i - 1][1].trim() : '',
-          });
-          i++;
-          if (items.length >= 5) break;
+          const titleMatch = content.match(/<title>([\s\S]*?)<\/title>/);
+          const linkMatch = content.match(/<link>([\s\S]*?)<\/link>/) ||
+                            content.match(/<guid[^>]*>([\s\S]*?)<\/guid>/);
+          const dateMatch = content.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+          const sourceMatch = content.match(/<source[^>]*>([\s\S]*?)<\/source>/);
+
+          if (titleMatch) {
+            const title = titleMatch[1]
+              .replace(/<!\[CDATA\[|\]\]>/g, '')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .trim();
+
+            if (title.includes('Google 新闻') || title.length < 5) continue;
+
+            items.push({
+              title,
+              link: linkMatch ? linkMatch[1].trim() : '',
+              date: dateMatch ? dateMatch[1].trim() : '',
+              source: sourceMatch ? sourceMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').trim() : '',
+            });
+          }
+          if (items.length >= 8) break;
         }
         resolve(items);
       });
     });
+
     req.on('error', () => resolve([]));
-    req.setTimeout(8000, () => { req.destroy(); resolve([]); });
+    req.setTimeout(10000, () => { req.destroy(); resolve([]); });
     req.end();
   });
 }
 
-// ─── 用Claude判断是否是有价值的新动态 ──────────────────────────
+// ─── Claude 分析重要性 ────────────────────────────────
 async function analyzeWithClaude(newItems) {
   const prompt = `你是一个帮助监控Kimi（月之暗面）上市动态的助手。
 
-以下是今天抓取到的新闻标题列表：
-${newItems.map((item, i) => `${i + 1}. ${item.title} (${item.date})`).join('\n')}
+以下是今天抓取到的新闻标题：
+${newItems.map((item, i) => `${i + 1}. [${item.source}] ${item.title} (${item.date})`).join('\n')}
 
-请判断：
-1. 哪些是关于月之暗面/Kimi的重要资本动态（IPO进展、新融资、递交招股书、上市时间表、估值变化等）
-2. 过滤掉无关新闻或纯产品功能更新
+请判断哪些是重要资本动态，包括：
+- IPO进展、递交招股书、上市时间表确定
+- 新一轮融资完成或接近完成
+- 估值重大变化
+- 港交所或证监会审批动态
+- 影响上市进程的重要事件
 
-返回格式（JSON）：
+过滤掉：无关新闻、纯产品更新、重复报道。
+
+仅返回JSON，不要其他文字：
 {
+  "hasImportant": true或false,
   "important": [
-    { "title": "标题", "reason": "重要原因（一句话）" }
-  ],
-  "hasImportant": true/false
-}
-
-只返回JSON，不要其他文字。`;
+    { "index": 序号, "title": "标题", "reason": "重要原因（一句话）" }
+  ]
+}`;
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 500,
+    max_tokens: 600,
     messages: [{ role: 'user', content: prompt }],
   });
 
@@ -141,13 +162,13 @@ ${newItems.map((item, i) => `${i + 1}. ${item.title} (${item.date})`).join('\n')
   }
 }
 
-// ─── 发送Telegram消息 ────────────────────────────────
+// ─── 发送Telegram ─────────────────────────────────────
 async function sendTelegram(message) {
   const body = JSON.stringify({
     chat_id: TELEGRAM_CHAT_ID,
     text: message,
     parse_mode: 'HTML',
-    disable_web_page_preview: false,
+    disable_web_page_preview: true,
   });
 
   const options = {
@@ -161,30 +182,33 @@ async function sendTelegram(message) {
   };
 
   await httpsRequest(options, body);
-  console.log('Telegram推送成功');
+  console.log('✅ Telegram推送成功');
 }
 
 // ─── 主流程 ──────────────────────────────────────────
 async function main() {
-  console.log(`🔍 开始监控Kimi上市动态... ${new Date().toLocaleString('zh-CN')}`);
+  console.log(`🔍 Kimi上市监控启动... ${new Date().toLocaleString('zh-CN')}`);
 
   const state = loadState();
   const allItems = [];
 
-  // 抓取所有关键词的新闻
   for (const keyword of SEARCH_KEYWORDS) {
-    const items = await fetchNews(keyword);
+    console.log(`  搜索: ${keyword}`);
+    const items = await fetchGoogleNews(keyword);
+    console.log(`  → 获取 ${items.length} 条`);
+
     for (const item of items) {
-      // 过滤掉已推送过的
       if (!state.sentTitles.includes(item.title) && item.title) {
         allItems.push(item);
       }
     }
+
+    await new Promise(r => setTimeout(r, 1500));
   }
 
-  // 去重
+  // 按标题去重
   const uniqueItems = [...new Map(allItems.map(item => [item.title, item])).values()];
-  console.log(`共抓取到 ${uniqueItems.length} 条新消息`);
+  console.log(`\n共 ${uniqueItems.length} 条未推送过的新消息`);
 
   if (uniqueItems.length === 0) {
     console.log('没有新动态，本次监控结束');
@@ -193,53 +217,46 @@ async function main() {
     return;
   }
 
-  // 用Claude过滤出重要的
+  console.log('正在用Claude分析...');
   const analysis = await analyzeWithClaude(uniqueItems);
 
-  if (!analysis.hasImportant || analysis.important.length === 0) {
-    console.log('无重要资本动态，跳过推送');
-    // 仍然记录已检查过的标题，避免重复分析
-    for (const item of uniqueItems) {
-      if (!state.sentTitles.includes(item.title)) {
-        state.sentTitles.push(item.title);
-      }
+  // 无论结果如何，记录已处理标题
+  for (const item of uniqueItems) {
+    if (!state.sentTitles.includes(item.title)) {
+      state.sentTitles.push(item.title);
     }
+  }
+
+  if (!analysis.hasImportant || analysis.important.length === 0) {
+    console.log('无重要资本动态，本次不推送');
   } else {
-    // 构建推送消息
-    let message = `🚨 <b>Kimi上市动态预警</b>\n`;
-    message += `📅 ${new Date().toLocaleString('zh-CN')}\n\n`;
+    let message = `🚨 <b>Kimi / 月之暗面 上市动态</b>\n`;
+    message += `🕐 ${new Date().toLocaleString('zh-CN')}\n`;
+    message += `─────────────────\n\n`;
 
     for (const item of analysis.important) {
-      const original = uniqueItems.find(i => i.title === item.title);
+      const original = uniqueItems[item.index - 1] || uniqueItems.find(i => i.title === item.title);
       message += `📌 <b>${item.title}</b>\n`;
+      if (original?.source) message += `来源：${original.source}\n`;
       message += `💡 ${item.reason}\n`;
-      if (original && original.link) {
-        message += `🔗 ${original.link}\n`;
-      }
+      if (original?.link) message += `🔗 <a href="${original.link}">查看原文</a>\n`;
       message += '\n';
-
-      // 记录已推送
-      if (!state.sentTitles.includes(item.title)) {
-        state.sentTitles.push(item.title);
-      }
     }
 
-    message += `─────────────\n监控关键词：月之暗面 IPO/上市/融资`;
-
+    message += `─────────────────\n#Kimi #月之暗面 #IPO`;
     await sendTelegram(message);
   }
 
-  // 只保留最近500条已推送标题，避免文件过大
   if (state.sentTitles.length > 500) {
     state.sentTitles = state.sentTitles.slice(-500);
   }
 
   state.lastCheck = new Date().toISOString();
   saveState(state);
-  console.log('✅ 监控完成');
+  console.log('✅ 本次监控完成');
 }
 
 main().catch(err => {
-  console.error('监控脚本出错:', err);
+  console.error('脚本出错:', err);
   process.exit(1);
 });
